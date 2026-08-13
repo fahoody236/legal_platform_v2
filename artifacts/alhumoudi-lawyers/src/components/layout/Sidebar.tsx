@@ -9,6 +9,8 @@ import {
   ScrollText,
   CheckSquare,
   Wand2,
+  Sparkles,
+  SlidersHorizontal,
   MessageSquare,
   Users,
   Settings,
@@ -16,15 +18,17 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-  { name: 'Dashboard',  path: '/',           icon: LayoutDashboard },
-  { name: 'Cases',      path: '/cases',       icon: Briefcase       },
-  { name: 'Documents',  path: '/documents',   icon: FileText        },
-  { name: 'Billing',    path: '/billing',     icon: Receipt         },
-  { name: 'Contracts',  path: '/contracts',   icon: ScrollText      },
-  { name: 'Tasks',      path: '/tasks',       icon: CheckSquare     },
-  { name: 'AI Drafts',  path: '/ai-drafts',   icon: Wand2           },
-  { name: 'Team Chat',  path: '/chat',        icon: MessageSquare   },
-  { name: 'Team',       path: '/team',        icon: Users           },
+  { name: 'Dashboard',     path: '/',              icon: LayoutDashboard  },
+  { name: 'Cases',         path: '/cases',         icon: Briefcase        },
+  { name: 'Documents',     path: '/documents',     icon: FileText         },
+  { name: 'Billing',       path: '/billing',       icon: Receipt          },
+  { name: 'Contracts',     path: '/contracts',     icon: ScrollText       },
+  { name: 'Tasks',         path: '/tasks',         icon: CheckSquare      },
+  { name: 'AI Assistant',  path: '/ai-assistant',  icon: Sparkles         },
+  { name: 'AI Drafts',     path: '/ai-drafts',     icon: Wand2            },
+  { name: 'AI Settings',   path: '/ai-settings',   icon: SlidersHorizontal},
+  { name: 'Team Chat',     path: '/chat',          icon: MessageSquare    },
+  { name: 'Team',          path: '/team',          icon: Users            },
 ];
 
 const adminItems = [

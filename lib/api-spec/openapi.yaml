@@ -19,6 +19,8 @@ tags:
   - name: contracts
   - name: ai-drafts
   - name: dashboard
+  - name: ai
+  - name: chat
 
 paths:
   /healthz:
@@ -1120,6 +1122,148 @@ paths:
                 items:
                   $ref: "#/components/schemas/CaseActivity"
 
+  # ─────────────────────────────────────────────
+  # AI SETTINGS
+  # ─────────────────────────────────────────────
+  /ai/settings:
+    get:
+      operationId: getAiSettings
+      tags: [ai]
+      summary: Get AI settings (creates defaults if none exist)
+      responses:
+        "200":
+          description: AI settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiSettings"
+    put:
+      operationId: updateAiSettings
+      tags: [ai]
+      summary: Update AI settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiSettingsInput"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiSettings"
+
+  # ─────────────────────────────────────────────
+  # AI KNOWLEDGE BASE
+  # ─────────────────────────────────────────────
+  /ai/knowledge-base:
+    get:
+      operationId: listKnowledgeBase
+      tags: [ai]
+      summary: List knowledge base entries
+      responses:
+        "200":
+          description: List of entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/KnowledgeBaseEntry"
+    post:
+      operationId: createKnowledgeBaseEntry
+      tags: [ai]
+      summary: Add a text/paste entry to the knowledge base
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KnowledgeBaseEntryInput"
+      responses:
+        "201":
+          description: Created entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnowledgeBaseEntry"
+
+  /ai/knowledge-base/{id}:
+    delete:
+      operationId: deleteKnowledgeBaseEntry
+      tags: [ai]
+      summary: Delete a knowledge base entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /ai/knowledge-base/import-document/{documentId}:
+    post:
+      operationId: importDocumentToKnowledgeBase
+      tags: [ai]
+      summary: Import an existing document into the knowledge base
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Imported entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnowledgeBaseEntry"
+
+  # ─────────────────────────────────────────────
+  # AI GENERATE DRAFT
+  # ─────────────────────────────────────────────
+  /ai/generate-draft:
+    post:
+      operationId: generateAiDraft
+      tags: [ai]
+      summary: Generate a legal draft using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateDraftInput"
+      responses:
+        "200":
+          description: Generated draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateDraftOutput"
+
+  # /ai/ask is SSE — no codegen response type needed; body schema only
+  /ai/ask:
+    post:
+      operationId: askAi
+      tags: [ai]
+      summary: Ask the AI a question (SSE streaming response)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiAskInput"
+      responses:
+        "200":
+          description: SSE stream of answer chunks
+          content:
+            text/event-stream: {}
+
 # ─────────────────────────────────────────────
 # COMPONENTS
 # ─────────────────────────────────────────────
@@ -2054,3 +2198,104 @@ components:
           type: number
         avgCaseClosureTime:
           type: ["number", "null"]
+
+    # ── AI Knowledge Base ──────────────────────
+    KnowledgeBaseEntry:
+      type: object
+      required: [id, title, content, sourceType, createdAt]
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        content:
+          type: string
+        sourceType:
+          type: string
+        sourceDocumentId:
+          type: ["number", "null"]
+        fileName:
+          type: ["string", "null"]
+        fileSize:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    KnowledgeBaseEntryInput:
+      type: object
+      required: [title, content]
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        sourceType:
+          type: string
+        sourceDocumentId:
+          type: number
+        fileName:
+          type: string
+        fileSize:
+          type: number
+
+    # ── AI Settings ────────────────────────────
+    AiSettings:
+      type: object
+      required: [id, model, systemPrompt, updatedAt]
+      properties:
+        id:
+          type: number
+        model:
+          type: string
+        systemPrompt:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    AiSettingsInput:
+      type: object
+      properties:
+        model:
+          type: string
+        systemPrompt:
+          type: string
+
+    # ── AI Ask / Generate ──────────────────────
+    AiAskInput:
+      type: object
+      required: [question]
+      properties:
+        question:
+          type: string
+        history:
+          type: array
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              role:
+                type: string
+              content:
+                type: string
+
+    GenerateDraftInput:
+      type: object
+      required: [draftType, instructions]
+      properties:
+        draftType:
+          type: string
+        caseId:
+          type: number
+        instructions:
+          type: string
+
+    GenerateDraftOutput:
+      type: object
+      required: [title, content]
+      properties:
+        title:
+          type: string
+        content:
+          type: string

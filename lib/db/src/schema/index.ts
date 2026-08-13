@@ -9,3 +9,5 @@ export * from "./tasks";
 export * from "./contracts";
 export * from "./ai_drafts";
 export * from "./chat";
+export * from "./knowledge_base";
+export * from "./ai_settings";

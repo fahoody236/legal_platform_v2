@@ -25,6 +25,8 @@ import AiDrafts from '@/pages/ai-drafts';
 import Team from '@/pages/team';
 import AdminUsers from '@/pages/admin/users';
 import Chat from '@/pages/chat';
+import AiAssistant from '@/pages/ai-assistant';
+import AiSettingsPage from '@/pages/ai-settings';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
@@ -58,6 +60,8 @@ function Router() {
         <ProtectedRoute path="/contracts/:id" component={ContractDetail} />
         <ProtectedRoute path="/tasks" component={Tasks} />
         <ProtectedRoute path="/ai-drafts" component={AiDrafts} />
+        <ProtectedRoute path="/ai-assistant" component={AiAssistant} />
+        <ProtectedRoute path="/ai-settings" component={AiSettingsPage} />
         <ProtectedRoute path="/chat" component={Chat} />
         <ProtectedRoute path="/team" component={Team} />
         <ProtectedRoute path="/admin/users" component={AdminUsers} />

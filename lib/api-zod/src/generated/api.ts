@@ -1298,3 +1298,128 @@ export const GetRecentActivityResponseItem = zod.object({
 export const GetRecentActivityResponse = zod.array(GetRecentActivityResponseItem)
 
 
+/**
+ * @summary Get AI settings (creates defaults if none exist)
+ */
+export const GetAiSettingsResponse = zod.object({
+  "id": zod.number(),
+  "model": zod.string(),
+  "systemPrompt": zod.string(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update AI settings
+ */
+export const UpdateAiSettingsBody = zod.object({
+  "model": zod.string().optional(),
+  "systemPrompt": zod.string().optional()
+})
+
+export const UpdateAiSettingsResponse = zod.object({
+  "id": zod.number(),
+  "model": zod.string(),
+  "systemPrompt": zod.string(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List knowledge base entries
+ */
+export const ListKnowledgeBaseResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "content": zod.string(),
+  "sourceType": zod.string(),
+  "sourceDocumentId": zod.number().nullish(),
+  "fileName": zod.string().nullish(),
+  "fileSize": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListKnowledgeBaseResponse = zod.array(ListKnowledgeBaseResponseItem)
+
+
+/**
+ * @summary Add a text/paste entry to the knowledge base
+ */
+export const CreateKnowledgeBaseEntryBody = zod.object({
+  "title": zod.string(),
+  "content": zod.string(),
+  "sourceType": zod.string().optional(),
+  "sourceDocumentId": zod.number().optional(),
+  "fileName": zod.string().optional(),
+  "fileSize": zod.number().optional()
+})
+
+export const CreateKnowledgeBaseEntryResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "content": zod.string(),
+  "sourceType": zod.string(),
+  "sourceDocumentId": zod.number().nullish(),
+  "fileName": zod.string().nullish(),
+  "fileSize": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a knowledge base entry
+ */
+export const DeleteKnowledgeBaseEntryParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const DeleteKnowledgeBaseEntryResponse = zod.void()
+
+
+/**
+ * @summary Import an existing document into the knowledge base
+ */
+export const ImportDocumentToKnowledgeBaseParams = zod.object({
+  "documentId": zod.coerce.number().int()
+})
+
+export const ImportDocumentToKnowledgeBaseResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "content": zod.string(),
+  "sourceType": zod.string(),
+  "sourceDocumentId": zod.number().nullish(),
+  "fileName": zod.string().nullish(),
+  "fileSize": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Generate a legal draft using AI
+ */
+export const GenerateAiDraftBody = zod.object({
+  "draftType": zod.string(),
+  "caseId": zod.number().optional(),
+  "instructions": zod.string()
+})
+
+export const GenerateAiDraftResponse = zod.object({
+  "title": zod.string(),
+  "content": zod.string()
+})
+
+
+/**
+ * @summary Ask the AI a question (SSE streaming response)
+ */
+export const AskAiBody = zod.object({
+  "question": zod.string(),
+  "history": zod.array(zod.object({
+  "role": zod.string(),
+  "content": zod.string()
+})).optional()
+})
+
+export const AskAiResponse = zod.unknown()
+
+

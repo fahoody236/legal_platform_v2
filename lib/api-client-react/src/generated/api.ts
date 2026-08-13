@@ -20,10 +20,13 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AiAskInput,
   AiDraft,
   AiDraftApproval,
   AiDraftInput,
   AiDraftRejection,
+  AiSettings,
+  AiSettingsInput,
   Case,
   CaseActivity,
   CaseActivityInput,
@@ -45,11 +48,15 @@ import type {
   Expense,
   ExpenseInput,
   ExpenseUpdate,
+  GenerateDraftInput,
+  GenerateDraftOutput,
   GetUpcomingDeadlinesParams,
   HealthStatus,
   Invoice,
   InvoiceInput,
   InvoiceUpdate,
+  KnowledgeBaseEntry,
+  KnowledgeBaseEntryInput,
   LawyerPerformance,
   ListAiDraftsParams,
   ListCasesParams,
@@ -4188,4 +4195,584 @@ export function useGetRecentActivity<TData = Awaited<ReturnType<typeof getRecent
 
 
 
+
+export const getGetAiSettingsUrl = () => {
+
+
+
+
+  return `/api/ai/settings`
+}
+
+/**
+ * @summary Get AI settings (creates defaults if none exist)
+ */
+export const getAiSettings = async ( options?: Parameters<typeof customFetch>[1]): Promise<AiSettings> => {
+
+  return customFetch<AiSettings>(getGetAiSettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAiSettingsQueryKey = () => {
+    return [
+    `/api/ai/settings`
+    ] as const;
+    }
+
+
+export const getGetAiSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getAiSettings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAiSettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAiSettings>>> = ({ signal }) => getAiSettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAiSettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAiSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getAiSettings>>>
+export type GetAiSettingsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get AI settings (creates defaults if none exist)
+ */
+
+export function useGetAiSettings<TData = Awaited<ReturnType<typeof getAiSettings>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAiSettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateAiSettingsUrl = () => {
+
+
+
+
+  return `/api/ai/settings`
+}
+
+/**
+ * @summary Update AI settings
+ */
+export const updateAiSettings = async (aiSettingsInput: AiSettingsInput, options?: Parameters<typeof customFetch>[1]): Promise<AiSettings> => {
+
+  return customFetch<AiSettings>(getUpdateAiSettingsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aiSettingsInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateAiSettingsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAiSettings>>, TError,{data: BodyType<AiSettingsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAiSettings>>, TError,{data: BodyType<AiSettingsInput>}, TContext> => {
+
+const mutationKey = ['updateAiSettings'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAiSettings>>, {data: BodyType<AiSettingsInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateAiSettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAiSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateAiSettings>>>
+    export type UpdateAiSettingsMutationBody = BodyType<AiSettingsInput>
+    export type UpdateAiSettingsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update AI settings
+ */
+export const useUpdateAiSettings = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAiSettings>>, TError,{data: BodyType<AiSettingsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAiSettings>>,
+        TError,
+        {data: BodyType<AiSettingsInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateAiSettingsMutationOptions(options));
+    }
+
+export const getListKnowledgeBaseUrl = () => {
+
+
+
+
+  return `/api/ai/knowledge-base`
+}
+
+/**
+ * @summary List knowledge base entries
+ */
+export const listKnowledgeBase = async ( options?: Parameters<typeof customFetch>[1]): Promise<KnowledgeBaseEntry[]> => {
+
+  return customFetch<KnowledgeBaseEntry[]>(getListKnowledgeBaseUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListKnowledgeBaseQueryKey = () => {
+    return [
+    `/api/ai/knowledge-base`
+    ] as const;
+    }
+
+
+export const getListKnowledgeBaseQueryOptions = <TData = Awaited<ReturnType<typeof listKnowledgeBase>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listKnowledgeBase>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListKnowledgeBaseQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listKnowledgeBase>>> = ({ signal }) => listKnowledgeBase({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listKnowledgeBase>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListKnowledgeBaseQueryResult = NonNullable<Awaited<ReturnType<typeof listKnowledgeBase>>>
+export type ListKnowledgeBaseQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List knowledge base entries
+ */
+
+export function useListKnowledgeBase<TData = Awaited<ReturnType<typeof listKnowledgeBase>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listKnowledgeBase>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListKnowledgeBaseQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateKnowledgeBaseEntryUrl = () => {
+
+
+
+
+  return `/api/ai/knowledge-base`
+}
+
+/**
+ * @summary Add a text/paste entry to the knowledge base
+ */
+export const createKnowledgeBaseEntry = async (knowledgeBaseEntryInput: KnowledgeBaseEntryInput, options?: Parameters<typeof customFetch>[1]): Promise<KnowledgeBaseEntry> => {
+
+  return customFetch<KnowledgeBaseEntry>(getCreateKnowledgeBaseEntryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(knowledgeBaseEntryInput)
+  }
+);}
+
+
+
+
+
+export const getCreateKnowledgeBaseEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createKnowledgeBaseEntry>>, TError,{data: BodyType<KnowledgeBaseEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createKnowledgeBaseEntry>>, TError,{data: BodyType<KnowledgeBaseEntryInput>}, TContext> => {
+
+const mutationKey = ['createKnowledgeBaseEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createKnowledgeBaseEntry>>, {data: BodyType<KnowledgeBaseEntryInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createKnowledgeBaseEntry(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateKnowledgeBaseEntryMutationResult = NonNullable<Awaited<ReturnType<typeof createKnowledgeBaseEntry>>>
+    export type CreateKnowledgeBaseEntryMutationBody = BodyType<KnowledgeBaseEntryInput>
+    export type CreateKnowledgeBaseEntryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a text/paste entry to the knowledge base
+ */
+export const useCreateKnowledgeBaseEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createKnowledgeBaseEntry>>, TError,{data: BodyType<KnowledgeBaseEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createKnowledgeBaseEntry>>,
+        TError,
+        {data: BodyType<KnowledgeBaseEntryInput>},
+        TContext
+      > => {
+      return useMutation(getCreateKnowledgeBaseEntryMutationOptions(options));
+    }
+
+export const getDeleteKnowledgeBaseEntryUrl = (id: number,) => {
+
+
+
+
+  return `/api/ai/knowledge-base/${id}`
+}
+
+/**
+ * @summary Delete a knowledge base entry
+ */
+export const deleteKnowledgeBaseEntry = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteKnowledgeBaseEntryUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteKnowledgeBaseEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteKnowledgeBaseEntry>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteKnowledgeBaseEntry>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteKnowledgeBaseEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteKnowledgeBaseEntry>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteKnowledgeBaseEntry(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteKnowledgeBaseEntryMutationResult = NonNullable<Awaited<ReturnType<typeof deleteKnowledgeBaseEntry>>>
+
+    export type DeleteKnowledgeBaseEntryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a knowledge base entry
+ */
+export const useDeleteKnowledgeBaseEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteKnowledgeBaseEntry>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteKnowledgeBaseEntry>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteKnowledgeBaseEntryMutationOptions(options));
+    }
+
+export const getImportDocumentToKnowledgeBaseUrl = (documentId: number,) => {
+
+
+
+
+  return `/api/ai/knowledge-base/import-document/${documentId}`
+}
+
+/**
+ * @summary Import an existing document into the knowledge base
+ */
+export const importDocumentToKnowledgeBase = async (documentId: number, options?: Parameters<typeof customFetch>[1]): Promise<KnowledgeBaseEntry> => {
+
+  return customFetch<KnowledgeBaseEntry>(getImportDocumentToKnowledgeBaseUrl(documentId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getImportDocumentToKnowledgeBaseMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importDocumentToKnowledgeBase>>, TError,{documentId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importDocumentToKnowledgeBase>>, TError,{documentId: number}, TContext> => {
+
+const mutationKey = ['importDocumentToKnowledgeBase'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importDocumentToKnowledgeBase>>, {documentId: number}> = (props) => {
+          const {documentId} = props ?? {};
+
+          return  importDocumentToKnowledgeBase(documentId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportDocumentToKnowledgeBaseMutationResult = NonNullable<Awaited<ReturnType<typeof importDocumentToKnowledgeBase>>>
+
+    export type ImportDocumentToKnowledgeBaseMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Import an existing document into the knowledge base
+ */
+export const useImportDocumentToKnowledgeBase = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importDocumentToKnowledgeBase>>, TError,{documentId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importDocumentToKnowledgeBase>>,
+        TError,
+        {documentId: number},
+        TContext
+      > => {
+      return useMutation(getImportDocumentToKnowledgeBaseMutationOptions(options));
+    }
+
+export const getGenerateAiDraftUrl = () => {
+
+
+
+
+  return `/api/ai/generate-draft`
+}
+
+/**
+ * @summary Generate a legal draft using AI
+ */
+export const generateAiDraft = async (generateDraftInput: GenerateDraftInput, options?: Parameters<typeof customFetch>[1]): Promise<GenerateDraftOutput> => {
+
+  return customFetch<GenerateDraftOutput>(getGenerateAiDraftUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(generateDraftInput)
+  }
+);}
+
+
+
+
+
+export const getGenerateAiDraftMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateAiDraft>>, TError,{data: BodyType<GenerateDraftInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateAiDraft>>, TError,{data: BodyType<GenerateDraftInput>}, TContext> => {
+
+const mutationKey = ['generateAiDraft'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateAiDraft>>, {data: BodyType<GenerateDraftInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  generateAiDraft(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateAiDraftMutationResult = NonNullable<Awaited<ReturnType<typeof generateAiDraft>>>
+    export type GenerateAiDraftMutationBody = BodyType<GenerateDraftInput>
+    export type GenerateAiDraftMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Generate a legal draft using AI
+ */
+export const useGenerateAiDraft = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateAiDraft>>, TError,{data: BodyType<GenerateDraftInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateAiDraft>>,
+        TError,
+        {data: BodyType<GenerateDraftInput>},
+        TContext
+      > => {
+      return useMutation(getGenerateAiDraftMutationOptions(options));
+    }
+
+export const getAskAiUrl = () => {
+
+
+
+
+  return `/api/ai/ask`
+}
+
+/**
+ * @summary Ask the AI a question (SSE streaming response)
+ */
+export const askAi = async (aiAskInput: AiAskInput, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+  return customFetch<unknown>(getAskAiUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aiAskInput)
+  }
+);}
+
+
+
+
+
+export const getAskAiMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askAi>>, TError,{data: BodyType<AiAskInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof askAi>>, TError,{data: BodyType<AiAskInput>}, TContext> => {
+
+const mutationKey = ['askAi'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof askAi>>, {data: BodyType<AiAskInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  askAi(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AskAiMutationResult = NonNullable<Awaited<ReturnType<typeof askAi>>>
+    export type AskAiMutationBody = BodyType<AiAskInput>
+    export type AskAiMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Ask the AI a question (SSE streaming response)
+ */
+export const useAskAi = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askAi>>, TError,{data: BodyType<AiAskInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof askAi>>,
+        TError,
+        {data: BodyType<AiAskInput>},
+        TContext
+      > => {
+      return useMutation(getAskAiMutationOptions(options));
+    }
 

@@ -6,10 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './aiAskInput';
+export * from './aiAskInputHistoryItem';
 export * from './aiDraft';
 export * from './aiDraftApproval';
 export * from './aiDraftInput';
 export * from './aiDraftRejection';
+export * from './aiSettings';
+export * from './aiSettingsInput';
 export * from './case';
 export * from './caseActivity';
 export * from './caseActivityInput';
@@ -32,11 +36,15 @@ export * from './documentVersion';
 export * from './expense';
 export * from './expenseInput';
 export * from './expenseUpdate';
+export * from './generateDraftInput';
+export * from './generateDraftOutput';
 export * from './getUpcomingDeadlinesParams';
 export * from './healthStatus';
 export * from './invoice';
 export * from './invoiceInput';
 export * from './invoiceUpdate';
+export * from './knowledgeBaseEntry';
+export * from './knowledgeBaseEntryInput';
 export * from './lawyerPerformance';
 export * from './listAiDraftsParams';
 export * from './listCasesParams';

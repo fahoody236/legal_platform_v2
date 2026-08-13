@@ -1,0 +1,6 @@
+- [AI module architecture](ai-module.md) — real OpenAI (Replit proxy) wired; knowledge base in DB; SSE streaming for /ai/ask
+- [Zod v3 codegen fix](zod-codegen-fix.md) — Orval emits zod.int() (v4 API); sed post-processor replaces with zod.number()
+- [Date fields pattern](date-fields.md) — Drizzle date(mode:"string") needs string not Date; use datesToStrings() helper before inserts
+- [SSE vs WebSockets](sse-pattern.md) — Use SSE for real-time through Replit's HTTP proxy; WebSockets unreliable
+- [Sidebar icon-only rail](sidebar.md) — 72px wide, tooltips on hover, active pill, admin divider
+- [Document list hook](codegen-hooks.md) — listAllDocuments / useListAllDocuments (not listDocuments) from OpenAPI operationId

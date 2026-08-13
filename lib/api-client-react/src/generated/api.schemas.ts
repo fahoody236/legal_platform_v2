@@ -538,6 +538,62 @@ export interface LawyerPerformance {
   avgCaseClosureTime?: number | null;
 }
 
+export interface KnowledgeBaseEntry {
+  id: number;
+  title: string;
+  content: string;
+  sourceType: string;
+  /** @nullable */
+  sourceDocumentId?: number | null;
+  /** @nullable */
+  fileName?: string | null;
+  /** @nullable */
+  fileSize?: number | null;
+  createdAt: string;
+}
+
+export interface KnowledgeBaseEntryInput {
+  title: string;
+  content: string;
+  sourceType?: string;
+  sourceDocumentId?: number;
+  fileName?: string;
+  fileSize?: number;
+}
+
+export interface AiSettings {
+  id: number;
+  model: string;
+  systemPrompt: string;
+  updatedAt: string;
+}
+
+export interface AiSettingsInput {
+  model?: string;
+  systemPrompt?: string;
+}
+
+export type AiAskInputHistoryItem = {
+  role: string;
+  content: string;
+};
+
+export interface AiAskInput {
+  question: string;
+  history?: AiAskInputHistoryItem[];
+}
+
+export interface GenerateDraftInput {
+  draftType: string;
+  caseId?: number;
+  instructions: string;
+}
+
+export interface GenerateDraftOutput {
+  title: string;
+  content: string;
+}
+
 export type ListCasesParams = {
 status?: string;
 search?: string;
