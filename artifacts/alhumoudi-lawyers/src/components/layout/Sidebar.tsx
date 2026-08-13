@@ -8,6 +8,7 @@ import {
   Receipt,
   ScrollText,
   CheckSquare,
+  CalendarDays,
   Wand2,
   Sparkles,
   SlidersHorizontal,
@@ -20,6 +21,7 @@ import {
 
 const navItems = [
   { name: 'Dashboard',     path: '/',              icon: LayoutDashboard   },
+  { name: 'Calendar',      path: '/calendar',      icon: CalendarDays      },
   { name: 'Cases',         path: '/cases',         icon: Briefcase         },
   { name: 'Documents',     path: '/documents',     icon: FileText          },
   { name: 'Billing',       path: '/billing',       icon: Receipt           },

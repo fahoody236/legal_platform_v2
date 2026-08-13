@@ -22,6 +22,7 @@ import Contracts from '@/pages/contracts';
 import ContractDetail from '@/pages/contract-detail';
 import Tasks from '@/pages/tasks';
 import AiDrafts from '@/pages/ai-drafts';
+import CalendarPage from '@/pages/calendar';
 import Team from '@/pages/team';
 import AdminUsers from '@/pages/admin/users';
 import Chat from '@/pages/chat';
@@ -59,6 +60,7 @@ function Router() {
         <ProtectedRoute path="/contracts" component={Contracts} />
         <ProtectedRoute path="/contracts/:id" component={ContractDetail} />
         <ProtectedRoute path="/tasks" component={Tasks} />
+        <ProtectedRoute path="/calendar" component={CalendarPage} />
         <ProtectedRoute path="/ai-drafts" component={AiDrafts} />
         <ProtectedRoute path="/ai-assistant" component={AiAssistant} />
         <ProtectedRoute path="/ai-settings" component={AiSettingsPage} />

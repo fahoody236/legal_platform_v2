@@ -10,6 +10,7 @@ import aiDraftsRouter from "./ai_drafts";
 import dashboardRouter from "./dashboard";
 import chatRouter from "./chat";
 import aiRouter from "./ai";
+import calendarRouter from "./calendar";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(aiDraftsRouter);
 router.use(dashboardRouter);
 router.use(chatRouter);
 router.use(aiRouter);
+router.use(calendarRouter);
 
 export default router;
