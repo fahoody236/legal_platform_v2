@@ -3,20 +3,29 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Alhumoudi Lawyers – practice management platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: users
+  - name: cases
+  - name: documents
+  - name: time-entries
+  - name: invoices
+  - name: expenses
+  - name: tasks
+  - name: contracts
+  - name: ai-drafts
+  - name: dashboard
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +33,2024 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─────────────────────────────────────────────
+  # USERS
+  # ─────────────────────────────────────────────
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/me:
+    get:
+      operationId: getCurrentUser
+      tags: [users]
+      summary: Get currently authenticated user (simulated – returns first admin)
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateUser
+      tags: [users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  # ─────────────────────────────────────────────
+  # CASES
+  # ─────────────────────────────────────────────
+  /cases:
+    get:
+      operationId: listCases
+      tags: [cases]
+      summary: List all cases
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cases list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Case"
+    post:
+      operationId: createCase
+      tags: [cases]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Case"
+
+  /cases/conflict-check:
+    get:
+      operationId: checkConflict
+      tags: [cases]
+      summary: Check for conflict of interest before opening a new matter
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Conflict check result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictCheckResult"
+
+  /cases/{id}:
+    get:
+      operationId: getCase
+      tags: [cases]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Case
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Case"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateCase
+      tags: [cases]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Case"
+    delete:
+      operationId: deleteCase
+      tags: [cases]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  /cases/{id}/timeline:
+    get:
+      operationId: getCaseTimeline
+      tags: [cases]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Case timeline activities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CaseActivity"
+    post:
+      operationId: addCaseActivity
+      tags: [cases]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseActivityInput"
+      responses:
+        "201":
+          description: Activity added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseActivity"
+
+  # ─────────────────────────────────────────────
+  # DOCUMENTS
+  # ─────────────────────────────────────────────
+  /cases/{caseId}/documents:
+    get:
+      operationId: listCaseDocuments
+      tags: [documents]
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Documents for case
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+    post:
+      operationId: createDocument
+      tags: [documents]
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+
+  /documents:
+    get:
+      operationId: listAllDocuments
+      tags: [documents]
+      summary: List all documents firm-wide
+      responses:
+        "200":
+          description: All documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+
+  /documents/{id}:
+    get:
+      operationId: getDocument
+      tags: [documents]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateDocument
+      tags: [documents]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+    delete:
+      operationId: deleteDocument
+      tags: [documents]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  /documents/{id}/versions:
+    get:
+      operationId: getDocumentVersions
+      tags: [documents]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Version history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentVersion"
+
+  # ─────────────────────────────────────────────
+  # TIME ENTRIES
+  # ─────────────────────────────────────────────
+  /time-entries:
+    get:
+      operationId: listTimeEntries
+      tags: [time-entries]
+      parameters:
+        - name: caseId
+          in: query
+          schema:
+            type: number
+        - name: lawyerId
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Time entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeEntry"
+    post:
+      operationId: createTimeEntry
+      tags: [time-entries]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeEntryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeEntry"
+
+  /time-entries/summary:
+    get:
+      operationId: getTimeSummary
+      tags: [time-entries]
+      summary: Billable hours summary by lawyer
+      responses:
+        "200":
+          description: Hours summary
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeEntrySummary"
+
+  /time-entries/{id}:
+    get:
+      operationId: getTimeEntry
+      tags: [time-entries]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Time entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeEntry"
+    patch:
+      operationId: updateTimeEntry
+      tags: [time-entries]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeEntryUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeEntry"
+    delete:
+      operationId: deleteTimeEntry
+      tags: [time-entries]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  # ─────────────────────────────────────────────
+  # INVOICES
+  # ─────────────────────────────────────────────
+  /invoices:
+    get:
+      operationId: listInvoices
+      tags: [invoices]
+      parameters:
+        - name: caseId
+          in: query
+          schema:
+            type: number
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invoices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invoice"
+    post:
+      operationId: createInvoice
+      tags: [invoices]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+
+  /invoices/{id}:
+    get:
+      operationId: getInvoice
+      tags: [invoices]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateInvoice
+      tags: [invoices]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+    delete:
+      operationId: deleteInvoice
+      tags: [invoices]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  # ─────────────────────────────────────────────
+  # EXPENSES
+  # ─────────────────────────────────────────────
+  /expenses:
+    get:
+      operationId: listExpenses
+      tags: [expenses]
+      parameters:
+        - name: caseId
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+    post:
+      operationId: createExpense
+      tags: [expenses]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+
+  /expenses/{id}:
+    patch:
+      operationId: updateExpense
+      tags: [expenses]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+    delete:
+      operationId: deleteExpense
+      tags: [expenses]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  # ─────────────────────────────────────────────
+  # TASKS
+  # ─────────────────────────────────────────────
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      parameters:
+        - name: caseId
+          in: query
+          schema:
+            type: number
+        - name: assigneeId
+          in: query
+          schema:
+            type: number
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}:
+    get:
+      operationId: getTask
+      tags: [tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  # ─────────────────────────────────────────────
+  # CONTRACTS
+  # ─────────────────────────────────────────────
+  /contracts:
+    get:
+      operationId: listContracts
+      tags: [contracts]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Contracts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Contract"
+    post:
+      operationId: createContract
+      tags: [contracts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+
+  /contracts/{id}:
+    get:
+      operationId: getContract
+      tags: [contracts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Contract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateContract
+      tags: [contracts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+    delete:
+      operationId: deleteContract
+      tags: [contracts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Deleted
+
+  /contracts/{id}/payment-schedules:
+    get:
+      operationId: listContractPayments
+      tags: [contracts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Payment schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContractPayment"
+    post:
+      operationId: createContractPayment
+      tags: [contracts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractPaymentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractPayment"
+
+  # ─────────────────────────────────────────────
+  # AI DRAFTS (Approval Workflow)
+  # ─────────────────────────────────────────────
+  /ai-drafts:
+    get:
+      operationId: listAiDrafts
+      tags: [ai-drafts]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: caseId
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: AI drafts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiDraft"
+    post:
+      operationId: createAiDraft
+      tags: [ai-drafts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiDraftInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiDraft"
+
+  /ai-drafts/{id}:
+    get:
+      operationId: getAiDraft
+      tags: [ai-drafts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: AI draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiDraft"
+        "404":
+          description: Not found
+
+  /ai-drafts/{id}/approve:
+    patch:
+      operationId: approveAiDraft
+      tags: [ai-drafts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiDraftApproval"
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiDraft"
+
+  /ai-drafts/{id}/reject:
+    patch:
+      operationId: rejectAiDraft
+      tags: [ai-drafts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiDraftRejection"
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiDraft"
+
+  # ─────────────────────────────────────────────
+  # DASHBOARD (WOW endpoints)
+  # ─────────────────────────────────────────────
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Firm-wide KPI snapshot
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/upcoming-deadlines:
+    get:
+      operationId: getUpcomingDeadlines
+      tags: [dashboard]
+      summary: Cases and tasks with upcoming deadlines
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: number
+            default: 30
+      responses:
+        "200":
+          description: Upcoming deadlines
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeadlineItem"
+
+  /dashboard/lawyer-performance:
+    get:
+      operationId: getLawyerPerformance
+      tags: [dashboard]
+      summary: Per-lawyer KPI metrics
+      responses:
+        "200":
+          description: Lawyer performance metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LawyerPerformance"
+
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Recent firm-wide activity feed
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CaseActivity"
+
+# ─────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # ── Users ──────────────────────────────────
+    User:
+      type: object
+      required: [id, name, email, role, createdAt]
+      properties:
+        id:
+          type: number
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          description: "admin | lawyer | support"
+        barNumber:
+          type: ["string", "null"]
+        specialization:
+          type: ["string", "null"]
+        billableRate:
+          type: ["number", "null"]
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    UserInput:
+      type: object
+      required: [name, email, role]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+        role:
+          type: string
+        barNumber:
+          type: string
+        specialization:
+          type: string
+        billableRate:
+          type: number
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        barNumber:
+          type: string
+        specialization:
+          type: string
+        billableRate:
+          type: number
+        active:
+          type: boolean
+
+    # ── Cases ──────────────────────────────────
+    Case:
+      type: object
+      required: [id, caseNumber, title, clientName, caseType, status, jurisdiction, createdAt]
+      properties:
+        id:
+          type: number
+        caseNumber:
+          type: string
+        title:
+          type: string
+        clientName:
+          type: string
+        clientEmail:
+          type: ["string", "null"]
+        clientPhone:
+          type: ["string", "null"]
+        caseType:
+          type: string
+        status:
+          type: string
+          description: "open | active | on_hold | closed"
+        jurisdiction:
+          type: string
+        court:
+          type: ["string", "null"]
+        opposingParty:
+          type: ["string", "null"]
+        opposingCounsel:
+          type: ["string", "null"]
+        assignedLawyerId:
+          type: ["integer", "null"]
+        assignedLawyerName:
+          type: ["string", "null"]
+        courtDate:
+          type: ["string", "null"]
+          format: date
+        statuteDeadline:
+          type: ["string", "null"]
+          format: date
+        description:
+          type: ["string", "null"]
+        retainerAmount:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CaseInput:
+      type: object
+      required: [title, clientName, caseType, status, jurisdiction]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        clientName:
+          type: string
+        clientEmail:
+          type: string
+        clientPhone:
+          type: string
+        caseType:
+          type: string
+        status:
+          type: string
+        jurisdiction:
+          type: string
+        court:
+          type: string
+        opposingParty:
+          type: string
+        opposingCounsel:
+          type: string
+        assignedLawyerId:
+          type: number
+        courtDate:
+          type: string
+          format: date
+        statuteDeadline:
+          type: string
+          format: date
+        description:
+          type: string
+        retainerAmount:
+          type: number
+
+    CaseUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        clientName:
+          type: string
+        clientEmail:
+          type: string
+        clientPhone:
+          type: string
+        caseType:
+          type: string
+        status:
+          type: string
+        jurisdiction:
+          type: string
+        court:
+          type: string
+        opposingParty:
+          type: string
+        opposingCounsel:
+          type: string
+        assignedLawyerId:
+          type: number
+        courtDate:
+          type: string
+          format: date
+        statuteDeadline:
+          type: string
+          format: date
+        description:
+          type: string
+        retainerAmount:
+          type: number
+
+    CaseActivity:
+      type: object
+      required: [id, caseId, activityType, description, createdAt]
+      properties:
+        id:
+          type: number
+        caseId:
+          type: number
+        activityType:
+          type: string
+          description: "filing | communication | hearing | note | document | task"
+        description:
+          type: string
+        performedBy:
+          type: ["string", "null"]
+        performedById:
+          type: ["integer", "null"]
+        caseTitle:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    CaseActivityInput:
+      type: object
+      required: [activityType, description]
+      properties:
+        activityType:
+          type: string
+        description:
+          type: string
+        performedById:
+          type: number
+
+    ConflictCheckResult:
+      type: object
+      required: [hasConflict, matches]
+      properties:
+        hasConflict:
+          type: boolean
+        matches:
+          type: array
+          items:
+            type: object
+            required: [caseId, caseTitle, matchType, matchedValue]
+            properties:
+              caseId:
+                type: number
+              caseTitle:
+                type: string
+              matchType:
+                type: string
+                description: "client | opposing_party | opposing_counsel"
+              matchedValue:
+                type: string
+
+    # ── Documents ──────────────────────────────
+    Document:
+      type: object
+      required: [id, caseId, title, fileType, status, version, uploadedBy, createdAt]
+      properties:
+        id:
+          type: number
+        caseId:
+          type: number
+        caseName:
+          type: ["string", "null"]
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        fileType:
+          type: string
+        filePath:
+          type: ["string", "null"]
+        status:
+          type: string
+          description: "draft | final | archived"
+        version:
+          type: number
+        uploadedBy:
+          type: string
+        uploadedById:
+          type: ["integer", "null"]
+        tags:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DocumentInput:
+      type: object
+      required: [title, fileType]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        fileType:
+          type: string
+        filePath:
+          type: string
+        status:
+          type: string
+        uploadedById:
+          type: number
+        tags:
+          type: string
+
+    DocumentUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        tags:
+          type: string
+
+    DocumentVersion:
+      type: object
+      required: [id, documentId, version, editedBy, editedAt, changeNote]
+      properties:
+        id:
+          type: number
+        documentId:
+          type: number
+        version:
+          type: number
+        editedBy:
+          type: string
+        editedAt:
+          type: string
+          format: date-time
+        changeNote:
+          type: string
+
+    # ── Time Entries ────────────────────────────
+    TimeEntry:
+      type: object
+      required: [id, caseId, lawyerId, hours, hourlyRate, date, description, isBillable, createdAt]
+      properties:
+        id:
+          type: number
+        caseId:
+          type: number
+        caseName:
+          type: ["string", "null"]
+        lawyerId:
+          type: number
+        lawyerName:
+          type: ["string", "null"]
+        hours:
+          type: number
+        hourlyRate:
+          type: number
+        totalAmount:
+          type: number
+        date:
+          type: string
+          format: date
+        description:
+          type: string
+        isBillable:
+          type: boolean
+        invoiced:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    TimeEntryInput:
+      type: object
+      required: [caseId, lawyerId, hours, hourlyRate, date, description]
+      properties:
+        caseId:
+          type: number
+        lawyerId:
+          type: number
+        hours:
+          type: number
+        hourlyRate:
+          type: number
+        date:
+          type: string
+          format: date
+        description:
+          type: string
+        isBillable:
+          type: boolean
+
+    TimeEntryUpdate:
+      type: object
+      properties:
+        hours:
+          type: number
+        hourlyRate:
+          type: number
+        date:
+          type: string
+          format: date
+        description:
+          type: string
+        isBillable:
+          type: boolean
+        invoiced:
+          type: boolean
+
+    TimeEntrySummary:
+      type: object
+      required: [lawyerId, lawyerName, totalHours, billableHours, totalAmount]
+      properties:
+        lawyerId:
+          type: number
+        lawyerName:
+          type: string
+        totalHours:
+          type: number
+        billableHours:
+          type: number
+        totalAmount:
+          type: number
+        unbilledAmount:
+          type: number
+
+    # ── Invoices ───────────────────────────────
+    Invoice:
+      type: object
+      required: [id, caseId, invoiceNumber, clientName, totalAmount, status, issuedDate, createdAt]
+      properties:
+        id:
+          type: number
+        caseId:
+          type: number
+        caseName:
+          type: ["string", "null"]
+        invoiceNumber:
+          type: string
+        clientName:
+          type: string
+        totalAmount:
+          type: number
+        paidAmount:
+          type: number
+        status:
+          type: string
+          description: "draft | sent | paid | overdue | cancelled"
+        issuedDate:
+          type: string
+          format: date
+        dueDate:
+          type: ["string", "null"]
+          format: date
+        paidDate:
+          type: ["string", "null"]
+          format: date
+        notes:
+          type: ["string", "null"]
+        retainerApplied:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+
+    InvoiceInput:
+      type: object
+      required: [caseId, clientName, totalAmount, issuedDate]
+      properties:
+        caseId:
+          type: number
+        clientName:
+          type: string
+        totalAmount:
+          type: number
+        issuedDate:
+          type: string
+          format: date
+        dueDate:
+          type: string
+          format: date
+        notes:
+          type: string
+        retainerApplied:
+          type: number
+
+    InvoiceUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        paidAmount:
+          type: number
+        paidDate:
+          type: string
+          format: date
+        notes:
+          type: string
+
+    # ── Expenses ───────────────────────────────
+    Expense:
+      type: object
+      required: [id, caseId, category, amount, description, date, submittedBy, createdAt]
+      properties:
+        id:
+          type: number
+        caseId:
+          type: number
+        caseName:
+          type: ["string", "null"]
+        category:
+          type: string
+          description: "filing_fee | travel | courier | expert | other"
+        amount:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+          format: date
+        submittedBy:
+          type: string
+        submittedById:
+          type: ["integer", "null"]
+        billable:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    ExpenseInput:
+      type: object
+      required: [caseId, category, amount, description, date]
+      properties:
+        caseId:
+          type: number
+        category:
+          type: string
+        amount:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+          format: date
+        submittedById:
+          type: number
+        billable:
+          type: boolean
+
+    ExpenseUpdate:
+      type: object
+      properties:
+        category:
+          type: string
+        amount:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+          format: date
+        billable:
+          type: boolean
+
+    # ── Tasks ──────────────────────────────────
+    Task:
+      type: object
+      required: [id, title, status, priority, createdAt]
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        caseId:
+          type: ["integer", "null"]
+        caseName:
+          type: ["string", "null"]
+        assigneeId:
+          type: ["integer", "null"]
+        assigneeName:
+          type: ["string", "null"]
+        createdById:
+          type: ["integer", "null"]
+        status:
+          type: string
+          description: "pending | in_progress | done | cancelled"
+        priority:
+          type: string
+          description: "low | medium | high | urgent"
+        dueDate:
+          type: ["string", "null"]
+          format: date
+        completedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    TaskInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        caseId:
+          type: number
+        assigneeId:
+          type: number
+        createdById:
+          type: number
+        status:
+          type: string
+        priority:
+          type: string
+        dueDate:
+          type: string
+          format: date
+
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        caseId:
+          type: number
+        assigneeId:
+          type: number
+        status:
+          type: string
+        priority:
+          type: string
+        dueDate:
+          type: string
+          format: date
+
+    # ── Contracts ──────────────────────────────
+    Contract:
+      type: object
+      required: [id, contractNumber, title, clientName, status, contractType, startDate, createdAt]
+      properties:
+        id:
+          type: number
+        contractNumber:
+          type: string
+        title:
+          type: string
+        clientName:
+          type: string
+        caseId:
+          type: ["integer", "null"]
+        caseName:
+          type: ["string", "null"]
+        status:
+          type: string
+          description: "active | finished | cancelled | draft"
+        contractType:
+          type: string
+        totalValue:
+          type: ["number", "null"]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: ["string", "null"]
+          format: date
+        description:
+          type: ["string", "null"]
+        responsibleLawyerId:
+          type: ["integer", "null"]
+        responsibleLawyerName:
+          type: ["string", "null"]
+        nextPaymentDate:
+          type: ["string", "null"]
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+
+    ContractInput:
+      type: object
+      required: [title, clientName, status, contractType, startDate]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        clientName:
+          type: string
+        caseId:
+          type: number
+        status:
+          type: string
+        contractType:
+          type: string
+        totalValue:
+          type: number
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        description:
+          type: string
+        responsibleLawyerId:
+          type: number
+
+    ContractUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        clientName:
+          type: string
+        status:
+          type: string
+        contractType:
+          type: string
+        totalValue:
+          type: number
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        description:
+          type: string
+        responsibleLawyerId:
+          type: number
+
+    ContractPayment:
+      type: object
+      required: [id, contractId, amount, dueDate, status, createdAt]
+      properties:
+        id:
+          type: number
+        contractId:
+          type: number
+        amount:
+          type: number
+        dueDate:
+          type: string
+          format: date
+        paidDate:
+          type: ["string", "null"]
+          format: date
+        status:
+          type: string
+          description: "pending | paid | overdue"
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    ContractPaymentInput:
+      type: object
+      required: [amount, dueDate]
+      properties:
+        amount:
+          type: number
+        dueDate:
+          type: string
+          format: date
+        status:
+          type: string
+        notes:
+          type: string
+
+    # ── AI Drafts ──────────────────────────────
+    AiDraft:
+      type: object
+      required: [id, title, draftType, status, content, createdAt]
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        draftType:
+          type: string
+          description: "contract | pleading | letter | legal_answer | other"
+        status:
+          type: string
+          description: "pending_approval | approved | rejected"
+        content:
+          type: string
+        caseId:
+          type: ["integer", "null"]
+        caseName:
+          type: ["string", "null"]
+        createdById:
+          type: ["integer", "null"]
+        createdByName:
+          type: ["string", "null"]
+        reviewedById:
+          type: ["integer", "null"]
+        reviewedByName:
+          type: ["string", "null"]
+        reviewedAt:
+          type: ["string", "null"]
+          format: date-time
+        reviewNotes:
+          type: ["string", "null"]
+        editsMadeBeforeApproval:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    AiDraftInput:
+      type: object
+      required: [title, draftType, content]
+      properties:
+        title:
+          type: string
+        draftType:
+          type: string
+        content:
+          type: string
+        caseId:
+          type: number
+        createdById:
+          type: number
+
+    AiDraftApproval:
+      type: object
+      required: [reviewedById]
+      properties:
+        reviewedById:
+          type: number
+        editsMadeBeforeApproval:
+          type: string
+        reviewNotes:
+          type: string
+
+    AiDraftRejection:
+      type: object
+      required: [reviewedById, reviewNotes]
+      properties:
+        reviewedById:
+          type: number
+        reviewNotes:
+          type: string
+
+    # ── Dashboard ──────────────────────────────
+    DashboardStats:
+      type: object
+      required: [activeCases, openCases, closedCases, pendingTasks, overdueTasks, unbilledHours, pendingInvoicesAmount, pendingAiDrafts, totalLawyers, activeContracts]
+      properties:
+        activeCases:
+          type: number
+        openCases:
+          type: number
+        closedCases:
+          type: number
+        onHoldCases:
+          type: number
+        pendingTasks:
+          type: number
+        overdueTasks:
+          type: number
+        unbilledHours:
+          type: number
+        pendingInvoicesAmount:
+          type: number
+        pendingAiDrafts:
+          type: number
+        totalLawyers:
+          type: number
+        activeContracts:
+          type: number
+        totalExpensesThisMonth:
+          type: number
+
+    DeadlineItem:
+      type: object
+      required: [id, type, title, deadline, daysUntil]
+      properties:
+        id:
+          type: number
+        type:
+          type: string
+          description: "case | task | contract_payment"
+        title:
+          type: string
+        deadline:
+          type: string
+          format: date
+        daysUntil:
+          type: number
+        relatedCaseId:
+          type: ["integer", "null"]
+        relatedCaseName:
+          type: ["string", "null"]
+        assigneeName:
+          type: ["string", "null"]
+        priority:
+          type: ["string", "null"]
+
+    LawyerPerformance:
+      type: object
+      required: [lawyerId, lawyerName, activeCases, billableHours, totalRevenue, tasksCompleted, tasksPending]
+      properties:
+        lawyerId:
+          type: number
+        lawyerName:
+          type: string
+        specialization:
+          type: ["string", "null"]
+        activeCases:
+          type: number
+        billableHours:
+          type: number
+        totalRevenue:
+          type: number
+        tasksCompleted:
+          type: number
+        tasksPending:
+          type: number
+        avgCaseClosureTime:
+          type: ["number", "null"]

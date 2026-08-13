@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Alhumoudi Lawyers"
+description = "A full-featured law firm practice management platform for Alhumoudi Lawyers. Covers case & matter management, document management with version control, billing & time tracking, team collaboration, contract management, AI content approval workflows, role-based access control, and a KPI dashboard — all in one internal tool for lawyers and support staff."
+version = "1.0.0"
+id = "artifacts/alhumoudi-lawyers"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23804
+
+[services.development]
+run = "pnpm --filter @workspace/alhumoudi-lawyers run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/alhumoudi-lawyers", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/alhumoudi-lawyers/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23804"
+BASE_PATH = "/"
