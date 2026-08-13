@@ -11,7 +11,8 @@ import {
   Wand2, 
   Users, 
   Settings,
-  LogOut
+  LogOut,
+  MessageSquare,
 } from 'lucide-react';
 import { Link } from 'wouter';
 
@@ -23,6 +24,7 @@ const navItems = [
   { name: 'Contracts', path: '/contracts', icon: ScrollText },
   { name: 'Tasks', path: '/tasks', icon: CheckSquare },
   { name: 'AI Drafts', path: '/ai-drafts', icon: Wand2 },
+  { name: 'Team Chat', path: '/chat', icon: MessageSquare },
   { name: 'Team', path: '/team', icon: Users },
 ];
 

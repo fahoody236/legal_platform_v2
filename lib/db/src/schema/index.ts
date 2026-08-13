@@ -8,3 +8,4 @@ export * from "./expenses";
 export * from "./tasks";
 export * from "./contracts";
 export * from "./ai_drafts";
+export * from "./chat";

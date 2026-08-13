@@ -8,6 +8,7 @@ import tasksRouter from "./tasks";
 import contractsRouter from "./contracts";
 import aiDraftsRouter from "./ai_drafts";
 import dashboardRouter from "./dashboard";
+import chatRouter from "./chat";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(tasksRouter);
 router.use(contractsRouter);
 router.use(aiDraftsRouter);
 router.use(dashboardRouter);
+router.use(chatRouter);
 
 export default router;

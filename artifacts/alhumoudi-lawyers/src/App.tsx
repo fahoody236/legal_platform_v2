@@ -24,6 +24,7 @@ import Tasks from '@/pages/tasks';
 import AiDrafts from '@/pages/ai-drafts';
 import Team from '@/pages/team';
 import AdminUsers from '@/pages/admin/users';
+import Chat from '@/pages/chat';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ function Router() {
         <ProtectedRoute path="/contracts/:id" component={ContractDetail} />
         <ProtectedRoute path="/tasks" component={Tasks} />
         <ProtectedRoute path="/ai-drafts" component={AiDrafts} />
+        <ProtectedRoute path="/chat" component={Chat} />
         <ProtectedRoute path="/team" component={Team} />
         <ProtectedRoute path="/admin/users" component={AdminUsers} />
         <ProtectedRoute path="/:rest*" component={NotFound} />

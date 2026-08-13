@@ -77,12 +77,18 @@ async function main() {
   ]);
 
   // ── Documents ─────────────────────────────────────────────────────
-  const [doc1] = await db.insert(documentsTable).values([
-    { caseId: case1.id, title: "Draft Merger Agreement v1", description: "Initial draft for client review", fileType: "pdf", filePath: "/uploads/merger-draft-v1.pdf", status: "draft", version: 2, uploadedById: admin.id, tags: ["merger", "draft"] },
-    { caseId: case1.id, title: "Due Diligence Report", description: "Full due diligence on Crescent Capital assets", fileType: "docx", filePath: "/uploads/due-diligence.docx", status: "final", version: 1, uploadedById: paralegal.id, tags: ["due-diligence"] },
-    { caseId: case2.id, title: "Custody Agreement Draft", description: "Initial custody proposal", fileType: "pdf", filePath: "/uploads/custody-draft.pdf", status: "draft", version: 1, uploadedById: lawyerSarah.id, tags: ["custody", "family"] },
-    { caseId: case3.id, title: "Police Report", description: "Official police report from Dammam PD", fileType: "pdf", filePath: "/uploads/police-report.pdf", status: "final", version: 1, uploadedById: lawyerOmar.id, tags: ["evidence", "criminal"] },
-  ]).returning();
+  const [doc1] = await db.insert(documentsTable).values(
+    { caseId: case1.id, title: "Draft Merger Agreement v1", description: "Initial draft for client review", fileType: "pdf", filePath: "/uploads/merger-draft-v1.pdf", status: "draft", version: 2, uploadedById: admin.id, tags: "merger,draft" }
+  ).returning();
+  await db.insert(documentsTable).values(
+    { caseId: case1.id, title: "Due Diligence Report", description: "Full due diligence on Crescent Capital assets", fileType: "docx", filePath: "/uploads/due-diligence.docx", status: "final", version: 1, uploadedById: paralegal.id, tags: "due-diligence" }
+  );
+  await db.insert(documentsTable).values(
+    { caseId: case2.id, title: "Custody Agreement Draft", description: "Initial custody proposal", fileType: "pdf", filePath: "/uploads/custody-draft.pdf", status: "draft", version: 1, uploadedById: lawyerSarah.id, tags: "custody,family" }
+  );
+  await db.insert(documentsTable).values(
+    { caseId: case3.id, title: "Police Report", description: "Official police report from Dammam PD", fileType: "pdf", filePath: "/uploads/police-report.pdf", status: "final", version: 1, uploadedById: lawyerOmar.id, tags: "evidence,criminal" }
+  );
 
   await db.insert(documentVersionsTable).values([
     { documentId: doc1.id, version: 1, changeNote: "Initial upload", editedById: admin.id },
@@ -167,7 +173,7 @@ async function main() {
       status: "approved",
       content: `IN THE FAMILY COURT OF JEDDAH\n\nCASE NO: JED-FAM-2026-0842\n\nPROPOSED CUSTODY ARRANGEMENT\n\nThe parties agree that the best interests of the minor child shall govern all arrangements.\n\nPRIMARY CUSTODY: Mother (Hessa Al-Sayegh)\nVISITATION: Father - every other weekend and school holidays\nFINANCIAL SUPPORT: SAR 5,000/month child support\n\n[APPROVED BY PARTNER ON ${fmt(addDays(today, -3))}]`,
       caseId: case2.id, createdById: paralegal.id, reviewedById: lawyerSarah.id,
-      reviewedAt: addDays(today, -3), reviewNotes: "Approved with minor formatting edits.", editsMadeBeforeApproval: true,
+      reviewedAt: addDays(today, -3), reviewNotes: "Approved with minor formatting edits.", editsMadeBeforeApproval: "Adjusted payment figures and formatting per partner review.",
     },
     {
       title: "Motion to Suppress Evidence", draftType: "court_brief",
