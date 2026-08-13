@@ -1,0 +1,67 @@
+1. Case & Matter Management
+
+	•	Case/matter records: client info (stored internally, no client login), case type, status (open/active/closed/on hold), assigned lawyer(s), opposing party, court/jurisdiction
+	•	Case timeline/activity log (every action, filing, communication tied to a case)
+	•	Court deadline & statute-of-limitations tracker with automated reminders
+	•	Conflict-of-interest check: search past/current clients and opposing parties before opening a new matter
+	•	All lawyers can view all cases firm-wide (no per-case restriction)
+
+2. Document Management
+
+	•	Central document repository per case
+	•	Version control and audit trail (who edited/viewed what, when)
+	•	Document templates library (pleadings, contracts, letters) with merge fields
+	•	Placeholder for e-signature integration (e.g., DocuSign API)
+
+3. Billing & Time Tracking
+
+	•	Time tracking per lawyer per case (billable hours, rates)
+	•	Invoice generation per client/case, payment status tracking
+	•	Trust accounting / retainer tracking (flag as compliance-sensitive — verify local requirements)
+	•	Expense tracking per case
+
+4. Internal Team Features
+
+	•	Internal chat (channels + DMs, file sharing)
+	•	Task manager tied to cases/deadlines, with in-app + email notifications
+	•	Team performance dashboard: billable hours, case load, task completion, deadlines met, KPIs per lawyer
+
+5. Contract Management Module
+
+	•	Contract database with status (Active, Finished, Cancelled), searchable archive
+	•	Payment schedule tracking with automated reminders
+	•	Linked to cases/clients
+
+6. AI Assistant Module
+
+	•	Chat-style AI assistant restricted to uploaded documents only (RAG via pgvector — mandatory refusal if answer isn’t in the uploaded set)
+	•	Capabilities:
+	•	Draft contracts from uploaded sample templates
+	•	Draft legal documents/pleadings from uploaded templates + case facts
+	•	Answer legal questions only from uploaded laws/regulations
+	•	Generate employee work plans
+	•	Generate performance/KPI reports per lawyer/staff
+	•	Summarize case documents/filings
+	•	AI Settings panel (Admin-only): upload/manage knowledge base (laws, regulations, templates) tagged by practice area; toggle which document sets AI can use per feature; full audit log of AI outputs
+
+7. AI Content Approval Workflow
+
+	•	Any AI-drafted legal document (contracts, pleadings, letters, legal answers) saves as Draft - Pending Approval — not usable/exportable until a Lawyer reviews and approves
+	•	Only “Lawyer” role can approve/reject (not Support Staff)
+	•	Approval logs: who approved, timestamp, edits made before approval
+	•	Rejected drafts require a comment and return for revision
+	•	Approved documents unlock for use in case/filing
+	•	Internal-only AI outputs (work plans, KPI reports) publish without approval — gate applies only to legal-content-with-external-effect
+	•	Dashboard widget: “Pending AI Drafts Awaiting Approval”
+
+8. Access Control
+
+	•	Roles: Admin/Managing Partner, Lawyer, Support Staff (optional)
+	•	All lawyers see all cases/clients/contracts/documents firm-wide
+	•	Admin-only: AI Settings, user management, firm-wide billing overview
+
+9. Dashboard
+
+	•	Landing page: upcoming deadlines, pending tasks, unbilled hours, active cases, pending AI approvals, KPI snapshot
+
+Build order: database schema (users, cases, documents, time_entries, invoices, contracts, tasks, messages, ai_knowledge_documents, ai_drafts, audit_logs) → backend API → frontend module by module: Case Management → Documents → Billing → Contracts → Team/Chat → AI Assistant → AI Settings/Approval.
