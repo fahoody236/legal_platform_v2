@@ -103,6 +103,78 @@ multi-tenant and carrying real data.
 
 ---
 
+## Planned AI capabilities
+
+Five capabilities are planned. None of them exist in usable form today — the
+prototype has a single keyword-matching assistant and a draft-approval workflow,
+described under "Current state" above.
+
+1. **Document search in Arabic.** Search across a firm's own documents, with
+   Arabic as the primary query and content language.
+2. **Work plan generation.** Generate a plan of work for a case or matter.
+3. **Employee work tracking.** Surface what staff are working on and how effort
+   is distributed across cases.
+4. **Legal advice grounded in the firm's own documents.** Answers cite and derive
+   from that firm's material rather than from the model's general knowledge.
+5. **Document drafting.** Generate legal drafts for review.
+
+### Two hard constraints
+
+**AI inference must respect Saudi data residency.** Client documents and prompts
+constructed from them are client data — sending them to an out-of-Kingdom
+inference endpoint moves that data out of Kingdom, regardless of whether it is
+retained. This applies to every model call in the pipeline, not just the final
+answer: embedding generation, reranking, summarization, and any evaluation or
+logging path that receives document text are all subject to it. The current
+integration (`lib/integrations-openai-ai-server/`) calls an OpenAI-compatible
+endpoint with no residency constraint, so it is not a usable foundation as-is.
+
+**Retrieval must be tenant-scoped.** A firm must never receive another firm's
+documents in an AI answer. Retrieval is the highest-risk path in the system for
+the tenant-isolation invariant, because it is a query route that bypasses the
+per-endpoint reasoning applied to normal CRUD:
+
+- Scope the retrieval query itself, and scope it as a **pre-filter**. Filtering a
+  top-k result set after the fact is both a correctness bug (it silently returns
+  fewer results than requested) and a leak waiting on one missed code path.
+- If a shared vector index is used, tenant identity must be part of the index
+  query, not applied afterward. A per-tenant index or namespace is easier to
+  argue correct.
+- The prompt is a disclosure surface. Anything placed in context will be
+  surfaced to the user, so a cross-tenant document reaching the context window
+  has already leaked, whether or not the model quotes it.
+- Watch shared state: conversation history, cached embeddings, prompt caches, and
+  any global knowledge base are all cross-tenant by default unless designed
+  otherwise. The existing `knowledge_base` and `ai_settings` tables are currently
+  firm-agnostic and single-row respectively.
+- Cross-tenant retrieval should be tested for directly, not assumed from code
+  review.
+
+### Notes for whoever builds this
+
+- **Arabic search needs normalization, not just a language setting.** Diacritics
+  (tashkeel), alef and hamza variants (`أ إ آ ا`), and taa marbuta (`ة` / `ه`)
+  mean the same query and document text can differ byte-for-byte. `ILIKE`, which
+  is what the prototype uses, handles none of this and does no morphological
+  matching. Decide the normalization scheme before the index is built.
+- **Residency constrains model choice, and model choice constrains Arabic
+  quality.** These two requirements pull against each other — the in-Kingdom
+  options may not be the strongest Arabic models. Worth resolving early, since it
+  affects retrieval design, not just a config value.
+- **Employee work tracking is personal data.** It is the one capability here whose
+  subject is staff rather than clients, which brings PDPL considerations and
+  likely internal-transparency expectations. Confirm the requirements before
+  designing it rather than treating it as another reporting view over
+  `time_entries` and `tasks`.
+- **Grounded advice needs provenance.** "Grounded in the firm's own documents"
+  implies answers carry citations back to source documents, which is a retrieval
+  and storage design decision, not something added to the prompt later.
+- **Drafting already has the right shape.** The existing `ai_drafts`
+  human-approval workflow is worth preserving — generated legal text should stay
+  reviewable before use.
+
+---
+
 ## Commands
 
 ```bash
