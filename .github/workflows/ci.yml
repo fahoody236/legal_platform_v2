@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint apps and packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Before setup-node, so that its pnpm cache resolution finds a pnpm binary.
+      # The version comes from "packageManager" in the root package.json.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # eslint.config.js already restricts itself to these two trees; naming them
+      # here keeps the prototype under artifacts/ and lib/ out of range even if
+      # that config is later widened.
+      - name: Lint
+        run: pnpm exec eslint apps packages --no-error-on-unmatched-pattern
