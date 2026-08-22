@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "generate": "drizzle-kit generate",
-    "migrate": "tsx src/migrate.ts"
+    "migrate": "tsx src/migrate.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",
@@ -14,6 +15,7 @@
   "devDependencies": {
     "@types/pg": "^8.20.0",
     "drizzle-kit": "^0.31.10",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "vitest": "^4.1.11"
   }
 }
