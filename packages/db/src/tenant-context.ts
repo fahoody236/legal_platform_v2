@@ -53,3 +53,30 @@ export async function withTenant<T>(
     return callback(tx);
   });
 }
+
+/**
+ * The firm this transaction is bound to, read back from the setting itself.
+ *
+ * Repositories need it to populate `firm_id` on insert, and reading it here
+ * rather than taking it as an argument means the value written to a row is
+ * necessarily the same value the row-level security policy will test it
+ * against. A caller cannot supply one firm to `withTenant` and a different one
+ * to an insert, because there is nowhere to supply the second.
+ *
+ * Throws outside a tenant context rather than returning null: an insert with no
+ * tenant would be rejected by the policy anyway, and a clear error here beats a
+ * not-null violation on `firm_id`.
+ */
+export async function currentFirmId(tx: TenantTransaction): Promise<string> {
+  const result = await tx.execute<{ firm_id: string | null }>(
+    sql`select nullif(current_setting('app.current_firm_id', true), '')::uuid as firm_id`,
+  );
+
+  const firmId = result.rows[0]?.firm_id;
+
+  if (!firmId) {
+    throw new Error("No tenant context: call this inside withTenant().");
+  }
+
+  return firmId;
+}
