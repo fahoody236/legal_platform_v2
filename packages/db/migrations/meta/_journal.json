@@ -8,6 +8,13 @@
       "when": 1787427845300,
       "tag": "0000_late_moira_mactaggert",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787428332530,
+      "tag": "0001_enable_rls_users",
+      "breakpoints": true
     }
   ]
 }
