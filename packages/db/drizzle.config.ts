@@ -12,8 +12,20 @@ import { defineConfig } from "drizzle-kit";
  */
 const url = process.env["DATABASE_URL"];
 
-if (!url) {
-  throw new Error("DATABASE_URL must be set to run drizzle-kit.");
+/**
+ * `generate` diffs the schema against the snapshot in migrations/meta and never
+ * opens a connection; `check` and `up` are likewise offline. Demanding a
+ * connection string for those would block generating a migration on a machine —
+ * or in a CI job — that has no database at all.
+ *
+ * Anything else drizzle-kit can be asked to do does connect, so the check stays
+ * for those.
+ */
+const OFFLINE_COMMANDS = new Set(["generate", "check", "up"]);
+const command = process.argv[2];
+
+if (!url && !OFFLINE_COMMANDS.has(command ?? "")) {
+  throw new Error(`DATABASE_URL must be set to run "drizzle-kit ${command}".`);
 }
 
 export default defineConfig({
@@ -22,7 +34,8 @@ export default defineConfig({
   schema: "./src/schema",
   out: "./migrations",
   dialect: "postgresql",
-  dbCredentials: { url },
+  // Only ever empty for the offline commands above, which do not read it.
+  dbCredentials: { url: url ?? "" },
   strict: true,
   verbose: true,
 });

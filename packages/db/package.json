@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate": "drizzle-kit generate"
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",
