@@ -21,6 +21,11 @@ if (!Number.isInteger(port) || port <= 0) {
 }
 
 const app = await NestFactory.create(AppModule);
+
+// Without this, onApplicationShutdown never runs and the database pool is left
+// open when the process is signalled.
+app.enableShutdownHooks();
+
 await app.listen(port);
 
 console.log(`API listening on http://localhost:${port}`);

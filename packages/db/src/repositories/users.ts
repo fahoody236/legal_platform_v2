@@ -16,6 +16,12 @@ import { currentFirmId, type TenantTransaction } from "../tenant-context.js";
  * query that forgot it would return zero rows rather than another firm's users.
  */
 
+/**
+ * Re-exported so the package's public entry point can expose the row type
+ * without importing the table it comes from.
+ */
+export type { User } from "../schema/index.js";
+
 export interface CreateUserInput {
   email: string;
   fullName: string;
