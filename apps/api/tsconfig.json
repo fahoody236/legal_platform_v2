@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.new.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["node"],
+
+    // NestJS resolves dependencies from the types TypeScript records against
+    // each constructor parameter. That metadata only exists if the compiler
+    // emits it, so both flags are required for dependency injection to work at
+    // all — without them a controller with constructor arguments fails at
+    // runtime, not at build time.
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": ["src"]
+}
