@@ -12,7 +12,6 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "generate": "drizzle-kit generate",
     "migrate": "tsx src/migrate.ts",
     "test": "vitest run"
   },

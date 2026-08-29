@@ -103,6 +103,48 @@ multi-tenant and carrying real data.
 
 ---
 
+## The v1 rebuild: `apps/` and `packages/`
+
+The replacement lives in a separate tree — `apps/api` (NestJS), `packages/db`,
+`packages/shared` — and does not share code, schema, or a database with the
+prototype above. Decisions are recorded in `docs/decisions/`; the adversaries
+the design answers to are in `docs/threat-model.md`.
+
+### Migrations are hand-written, and `drizzle-kit generate` is not used
+
+`packages/db/migrations/` holds numbered `.sql` files applied by
+`pnpm --filter @legal/db run migrate`. There is no `generate` script, and adding
+one back would be a mistake.
+
+Tenant isolation is enforced in the database, and most of what enforces it is
+not expressible as a schema diff: row-level security policies, `FORCE ROW LEVEL
+SECURITY`, the unprivileged `legal_app` role, and per-table grants that
+deliberately withhold `DELETE`. Drizzle-kit neither generates those nor knows
+they exist, so a generated migration would silently omit the parts that make a
+table safe — and worse, would diff against a snapshot that stopped tracking
+reality at 0000 and emit `CREATE TABLE` for tables that already exist.
+
+So, when adding a table:
+
+- Write the Drizzle schema file (types and queries read from it) **and** a
+  hand-written migration. They are maintained together; nothing generates one
+  from the other.
+- Carry a non-nullable `firm_id` and reference parents with a composite foreign
+  key — `FOREIGN KEY (firm_id, user_id) REFERENCES users (firm_id, id)` — so a
+  cross-firm reference cannot be represented.
+- `ENABLE` **and** `FORCE ROW LEVEL SECURITY`, with `SELECT`/`INSERT`/`UPDATE`
+  policies in the established fail-closed form. Absent tenant context must read
+  as zero rows, never as every row.
+- No `DELETE` policy and no `DELETE` grant. Records are archived, revoked, or
+  superseded.
+- Grant explicitly to `legal_app`. There is no `ALTER DEFAULT PRIVILEGES`, so a
+  new table is unreachable until someone grants it on purpose.
+
+Migrations are immutable once applied. Fix a mistake with a new migration that
+drops and recreates, never by editing a file already in the database.
+
+---
+
 ## Planned AI capabilities
 
 Five capabilities are planned. None of them exist in usable form today — the
