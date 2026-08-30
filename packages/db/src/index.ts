@@ -18,6 +18,8 @@ export type { Database } from "./client.js";
 export { withTenant, currentFirmId } from "./tenant-context.js";
 export type { TenantTransaction } from "./tenant-context.js";
 
+export { resolveFirmBySubdomain } from "./tenant-resolution.js";
+
 export {
   assertRlsAppliesToConnection,
   inspectConnectionRole,

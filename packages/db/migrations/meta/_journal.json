@@ -50,6 +50,13 @@
       "when": 1788075423167,
       "tag": "0006_firms_subdomain",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788075913087,
+      "tag": "0007_resolve_firm_by_subdomain",
+      "breakpoints": true
     }
   ]
 }
