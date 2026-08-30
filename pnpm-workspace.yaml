@@ -7,6 +7,7 @@ packages:
   - scripts
 
 allowBuilds:
+  argon2: true
   esbuild: true
 
 autoInstallPeers: false
@@ -43,6 +44,7 @@ minimumReleaseAgeExclude:
 
 onlyBuiltDependencies:
   - '@swc/core'
+  - argon2
   - esbuild
   - msw
   - unrs-resolver
