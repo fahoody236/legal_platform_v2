@@ -90,21 +90,39 @@ export async function clearFailedAttempts(
 }
 
 /**
- * Sets a user's password. The caller hashes — this layer never sees a plaintext
- * password, and `passwordHash` is expected to be an encoded Argon2id digest.
+ * Sets a user's password, creating the credential if there is none. The caller
+ * hashes — this layer never sees a plaintext password, and `passwordHash` is
+ * expected to be an encoded Argon2id digest.
  *
- * Not part of the login flow; it exists so a credential can be created at all,
- * which sign-in and its tests otherwise have no way to arrange.
+ * Setting a password clears the failure count and any lock. That is the
+ * intended behaviour rather than a convenience: an administrator resetting a
+ * password for a colleague who has locked themselves out should not have to
+ * separately remember to unlock them, and a new password makes the old failed
+ * guesses meaningless anyway.
+ *
+ * One statement, so a concurrent sign-in cannot interleave between a read and a
+ * write and resurrect a stale failure count.
  */
-export async function createCredential(
+export async function upsertCredential(
   tx: TenantTransaction,
   input: { userId: string; passwordHash: string },
 ): Promise<void> {
   const firmId = await currentFirmId(tx);
 
-  await tx.insert(credentials).values({
-    firmId,
-    userId: input.userId,
-    passwordHash: input.passwordHash,
-  });
+  await tx
+    .insert(credentials)
+    .values({
+      firmId,
+      userId: input.userId,
+      passwordHash: input.passwordHash,
+    })
+    .onConflictDoUpdate({
+      target: credentials.userId,
+      set: {
+        passwordHash: input.passwordHash,
+        passwordUpdatedAt: sql`now()`,
+        failedAttempts: 0,
+        lockedUntil: null,
+      },
+    });
 }

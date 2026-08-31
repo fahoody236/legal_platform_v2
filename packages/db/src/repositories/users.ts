@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { users, type User } from "../schema/index.js";
 import { currentFirmId, type TenantTransaction } from "../tenant-context.js";
 
@@ -48,6 +48,25 @@ export async function findUserById(
   id: string,
 ): Promise<User | undefined> {
   const [user] = await tx.select().from(users).where(eq(users.id, id)).limit(1);
+  return user;
+}
+
+/**
+ * Case-insensitive, written to match the `users_firm_id_lower_email_key`
+ * expression exactly — see the note on `findCredentialByEmail`. Returns
+ * undefined for an address at another firm as readily as for one that does not
+ * exist anywhere.
+ */
+export async function findUserByEmail(
+  tx: TenantTransaction,
+  email: string,
+): Promise<User | undefined> {
+  const [user] = await tx
+    .select()
+    .from(users)
+    .where(sql`lower(${users.email}) = lower(${email})`)
+    .limit(1);
+
   return user;
 }
 
