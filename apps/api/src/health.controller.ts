@@ -1,4 +1,5 @@
 import { Controller, Get } from "@nestjs/common";
+import { Public } from "./auth/public.decorator.js";
 
 /**
  * Liveness only. It reports that the process is up and serving, and deliberately
@@ -7,6 +8,7 @@ import { Controller, Get } from "@nestjs/common";
  */
 @Controller("health")
 export class HealthController {
+  @Public()
   @Get()
   check(): { status: string } {
     return { status: "ok" };

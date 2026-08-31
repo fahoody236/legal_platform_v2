@@ -76,6 +76,22 @@ export async function findActiveSessionByTokenHash(
   return row;
 }
 
+/**
+ * Ends a session. An UPDATE, never a DELETE: the row records that someone was
+ * signed in between two times, which is exactly the kind of history the audit
+ * trail depends on. Revoking twice is harmless and leaves the first timestamp
+ * intact.
+ */
+export async function revokeSession(
+  tx: TenantTransaction,
+  sessionId: string,
+): Promise<void> {
+  await tx
+    .update(sessions)
+    .set({ revokedAt: sql`now()` })
+    .where(and(eq(sessions.id, sessionId), isNull(sessions.revokedAt)));
+}
+
 /** Records activity, for idle-timeout policy and for a user's session list. */
 export async function touchSession(
   tx: TenantTransaction,

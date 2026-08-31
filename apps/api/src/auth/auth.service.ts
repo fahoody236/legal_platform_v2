@@ -5,6 +5,7 @@ import {
   findActiveSessionByTokenHash,
   findCredentialByEmail,
   recordFailedAttempt,
+  revokeSession,
   touchSession,
   withTenant,
   type Database,
@@ -21,6 +22,11 @@ export interface AuthenticatedUser {
   userId: string;
   email: string;
   fullName: string;
+}
+
+export interface AuthenticatedSession {
+  sessionId: string;
+  user: AuthenticatedUser;
 }
 
 export type LoginResult =
@@ -134,7 +140,7 @@ export class AuthService implements OnModuleInit {
   async validateSession(
     firmId: string,
     token: string,
-  ): Promise<AuthenticatedUser | null> {
+  ): Promise<AuthenticatedSession | null> {
     const tokenHash = hashSessionToken(token);
 
     return withTenant(this.db, firmId, async (tx) => {
@@ -147,10 +153,24 @@ export class AuthService implements OnModuleInit {
       await touchSession(tx, session.sessionId);
 
       return {
-        userId: session.userId,
-        email: session.email,
-        fullName: session.fullName,
+        sessionId: session.sessionId,
+        user: {
+          userId: session.userId,
+          email: session.email,
+          fullName: session.fullName,
+        },
       };
+    });
+  }
+
+  /**
+   * Ends one session. Idempotent, and silent about whether the session existed —
+   * the caller is signing out either way, and there is nothing useful to tell
+   * them about a token that was already dead.
+   */
+  async logout(firmId: string, sessionId: string): Promise<void> {
+    await withTenant(this.db, firmId, async (tx) => {
+      await revokeSession(tx, sessionId);
     });
   }
 }
