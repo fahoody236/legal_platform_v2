@@ -59,10 +59,10 @@ export const cases = pgTable(
     clientId: uuid("client_id").notNull(),
     /** The firm's own file reference. Unique within the firm, not globally. */
     caseNumber: text("case_number").notNull(),
-    /** Latin-script title. */
-    title: text("title").notNull(),
-    /** Arabic title — what most users will actually read. */
-    titleAr: text("title_ar"),
+    /** Arabic title — the required one, and what users actually read. */
+    titleAr: text("title_ar").notNull(),
+    /** Latin-script title. Optional, like the client's Latin name. */
+    title: text("title"),
     caseType: text("case_type").notNull(),
     /** Null for advisory work and anything else with no forum. */
     court: text("court"),
