@@ -10,6 +10,7 @@ import {
   withTenant,
   type Database,
 } from "@legal/db";
+import { AuditService } from "../audit/audit.service.js";
 import { DATABASE } from "../database/database.module.js";
 import { dummyPasswordHash, verifyPassword } from "./password.js";
 import { hashSessionToken, issueSessionToken } from "./session-token.js";
@@ -49,7 +50,10 @@ const REJECTED: LoginResult = Object.freeze({ outcome: "rejected" as const });
 
 @Injectable()
 export class AuthService implements OnModuleInit {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    private readonly audit: AuditService,
+  ) {}
 
   /**
    * Computes the dummy hash at startup so the first unknown-user sign-in is not
@@ -67,18 +71,52 @@ export class AuthService implements OnModuleInit {
    * Every path through this method performs exactly one Argon2 verification.
    * That is deliberate and load-bearing; see password.ts for why an early
    * return on "no such user" would turn this into a user-enumeration oracle.
+   *
+   * Every path also writes exactly one audit entry, which leaves the timing
+   * profile as it was: the unknown-address path previously wrote nothing and
+   * now writes one row, the wrong-password path previously wrote one and now
+   * writes two, so the difference between them is the same single write it
+   * always was — the ~1ms asymmetry noted in password.ts, against a ~22ms
+   * baseline.
+   *
+   * The entries carry a `reason` the response does not. That is not a
+   * contradiction of the frozen `REJECTED` above: what must be indistinguishable
+   * is what the *caller* learns. A firm investigating its own sign-in failures
+   * needs to tell a locked account from a mistyped address, and the audit trail
+   * is where that distinction is safe to record.
    */
   async login(
     firmId: string,
     email: string,
     password: string,
+    ip: string | null,
   ): Promise<LoginResult> {
     return withTenant(this.db, firmId, async (tx) => {
+      const reject = async (
+        reason: string,
+        actorUserId: string | null,
+      ): Promise<LoginResult> => {
+        await this.audit.record(tx, {
+          action: "auth.login.failed",
+          resourceType: "session",
+          actorUserId,
+          // The submitted address, lowercased to match how it is looked up. It
+          // was offered to this firm as an identifier, so it is this firm's to
+          // see. The password is not here and must never be: an audit trail is
+          // long-lived and disclosable, which is the worst possible home for a
+          // credential someone typed into the wrong field.
+          detail: { email: email.toLowerCase(), reason },
+          ip,
+        });
+
+        return REJECTED;
+      };
+
       const credential = await findCredentialByEmail(tx, email);
 
       if (!credential) {
         await verifyPassword(await dummyPasswordHash(), password);
-        return REJECTED;
+        return reject("unknown_email", null);
       }
 
       // A locked or disabled account still pays for a verification. Skipping it
@@ -89,7 +127,10 @@ export class AuthService implements OnModuleInit {
 
       if (locked || credential.userDisabledAt !== null) {
         await verifyPassword(await dummyPasswordHash(), password);
-        return REJECTED;
+        return reject(
+          locked ? "locked" : "user_disabled",
+          credential.userId,
+        );
       }
 
       const valid = await verifyPassword(credential.passwordHash, password);
@@ -99,7 +140,7 @@ export class AuthService implements OnModuleInit {
           maxAttempts: MAX_FAILED_ATTEMPTS,
           lockMinutes: LOCK_MINUTES,
         });
-        return REJECTED;
+        return reject("wrong_password", credential.userId);
       }
 
       await clearFailedAttempts(tx, credential.credentialId);
@@ -107,10 +148,20 @@ export class AuthService implements OnModuleInit {
       const { token, tokenHash } = issueSessionToken();
       const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
-      await createSession(tx, {
+      const sessionId = await createSession(tx, {
         userId: credential.userId,
         tokenHash,
         expiresAt,
+      });
+
+      // Inside the same transaction as the session insert, so a session cannot
+      // exist unrecorded and a record cannot describe a session that does not.
+      await this.audit.record(tx, {
+        action: "auth.login.succeeded",
+        resourceType: "session",
+        resourceId: sessionId,
+        actorUserId: credential.userId,
+        ip,
       });
 
       return {
@@ -167,10 +218,28 @@ export class AuthService implements OnModuleInit {
    * Ends one session. Idempotent, and silent about whether the session existed —
    * the caller is signing out either way, and there is nothing useful to tell
    * them about a token that was already dead.
+   *
+   * The revocation and its entry share a transaction, so a session cannot be
+   * revoked without the trail saying who did it and when. That pairing is what
+   * makes a session's lifetime — created here, ended here — reconstructible
+   * from the log alone.
    */
-  async logout(firmId: string, sessionId: string): Promise<void> {
+  async logout(
+    firmId: string,
+    sessionId: string,
+    actorUserId: string,
+    ip: string | null,
+  ): Promise<void> {
     await withTenant(this.db, firmId, async (tx) => {
       await revokeSession(tx, sessionId);
+
+      await this.audit.record(tx, {
+        action: "auth.logout",
+        resourceType: "session",
+        resourceId: sessionId,
+        actorUserId,
+        ip,
+      });
     });
   }
 }

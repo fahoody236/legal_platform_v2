@@ -58,9 +58,14 @@ export class AuthController {
     // Consumed before the password is verified, so throttled traffic never
     // reaches Argon2 — which is expensive by design and therefore worth
     // shielding from anyone who has stopped caring about the answers.
-    const ip = request.socket.remoteAddress ?? "unknown";
+    const ip = request.socket.remoteAddress ?? null;
 
-    if (!this.rateLimiter.allow(ip, body.email)) {
+    // Not audited, and that is a gap rather than a decision: a throttled request
+    // never reaches the service, so it never reaches a tenant transaction to
+    // record itself in. Sustained throttling is exactly what a firm reviewing an
+    // attack would want to see. Recording it needs a transaction opened for the
+    // entry alone, which is a different shape from every other entry here.
+    if (!this.rateLimiter.allow(ip ?? "unknown", body.email)) {
       // 429 rather than a 401 that would hide the throttling. It would not hide
       // it anyway: a rejected request returns immediately, while a real attempt
       // spends ~22ms in Argon2, so the clock announces the difference whatever
@@ -73,6 +78,7 @@ export class AuthController {
       firmId,
       body.email,
       body.password,
+      ip,
     );
 
     if (result.outcome !== "authenticated") {
@@ -99,9 +105,14 @@ export class AuthController {
     @Res({ passthrough: true }) response: ServerResponse,
   ): Promise<void> {
     const firmId = requireFirmId(request);
-    const { sessionId } = requireSession(request);
+    const { sessionId, user } = requireSession(request);
 
-    await this.authService.logout(firmId, sessionId);
+    await this.authService.logout(
+      firmId,
+      sessionId,
+      user.userId,
+      request.socket.remoteAddress ?? null,
+    );
     clearSessionCookie(response);
   }
 

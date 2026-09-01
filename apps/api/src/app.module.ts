@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { AuditModule } from "./audit/audit.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { HealthController } from "./health.controller.js";
@@ -12,7 +13,13 @@ import { TenantModule } from "./tenant/tenant.module.js";
  * Nothing enforces that yet; see the TODO in PermissionsModule.
  */
 @Module({
-  imports: [DatabaseModule, TenantModule, AuthModule, PermissionsModule],
+  imports: [
+    DatabaseModule,
+    AuditModule,
+    TenantModule,
+    AuthModule,
+    PermissionsModule,
+  ],
   controllers: [HealthController],
 })
 export class AppModule {}

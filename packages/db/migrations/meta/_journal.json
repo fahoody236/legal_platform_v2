@@ -64,6 +64,13 @@
       "when": 1788253358757,
       "tag": "0008_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788425000000,
+      "tag": "0009_audit_log",
+      "breakpoints": true
     }
   ]
 }

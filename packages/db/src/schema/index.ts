@@ -4,3 +4,4 @@ export * from "./credentials.js";
 export * from "./sessions.js";
 export * from "./permissions.js";
 export * from "./roles.js";
+export * from "./audit_log.js";
