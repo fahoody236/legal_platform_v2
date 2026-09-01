@@ -22,6 +22,21 @@ if (!Number.isInteger(port) || port <= 0) {
 
 const app = await NestFactory.create(AppModule);
 
+/**
+ * Every route lives under /api, in every environment.
+ *
+ * The browser and the API share an origin — the session cookie is HttpOnly and
+ * SameSite=Strict, which is only worth having if the two are not cross-origin —
+ * so something has to separate API paths from the application's own. Doing it
+ * with a prefix the server actually serves, rather than one a dev proxy strips,
+ * keeps development and production agreeing about what the API's paths are.
+ *
+ * Note for anything path-based elsewhere in the app: middleware exclusions and
+ * route matchers see the prefixed path. TenantModule's health exclusion is
+ * written accordingly.
+ */
+app.setGlobalPrefix("api");
+
 // Without this, onApplicationShutdown never runs and the database pool is left
 // open when the process is signalled.
 app.enableShutdownHooks();

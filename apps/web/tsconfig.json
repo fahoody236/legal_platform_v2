@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.new.json",
+  "compilerOptions": {
+    // Overrides for a bundled browser target. The base is written for Node
+    // packages: nodenext resolution would demand explicit .js extensions on
+    // every relative import, which is not how Vite resolves modules.
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+
+    // Vite emits the bundle; tsc only typechecks.
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "incremental": false
+  },
+  "include": ["src", "vite.config.ts"]
+}
