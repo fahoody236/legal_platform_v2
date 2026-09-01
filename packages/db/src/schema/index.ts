@@ -5,3 +5,5 @@ export * from "./sessions.js";
 export * from "./permissions.js";
 export * from "./roles.js";
 export * from "./audit_log.js";
+export * from "./clients.js";
+export * from "./cases.js";
