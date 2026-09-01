@@ -13,6 +13,7 @@ import {
   UsePipes,
 } from "@nestjs/common";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
+import { SessionOnly } from "../permissions/session-only.decorator.js";
 import { requireFirmId } from "../tenant/tenant-request.js";
 import {
   AuthService,
@@ -84,6 +85,13 @@ export class AuthController {
     return { user: result.user };
   }
 
+  /**
+   * Ends the caller's own session, so the session is both the credential and
+   * the resource. There is no permission to require: a firm cannot coherently
+   * grant or withhold the ability to sign out, and a user who has lost every
+   * permission still needs to be able to leave.
+   */
+  @SessionOnly()
   @Post("logout")
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(
@@ -97,6 +105,15 @@ export class AuthController {
     clearSessionCookie(response);
   }
 
+  /**
+   * Returns nothing the caller did not already present. Everything in the body
+   * came from the session this request authenticated with, so gating it behind
+   * `users.view` would mean a firm could remove someone's ability to see their
+   * own name — locking them out of the interface without denying them a single
+   * record. If this ever grows to return the caller's permissions or firm
+   * settings, that is a different route with a different rule.
+   */
+  @SessionOnly()
   @Get("me")
   me(@Req() request: AuthenticatedRequest): { user: AuthenticatedUser } {
     return { user: requireSession(request).user };

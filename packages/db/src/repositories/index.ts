@@ -5,3 +5,4 @@
 export * from "./users.js";
 export * from "./credentials.js";
 export * from "./sessions.js";
+export * from "./permissions.js";

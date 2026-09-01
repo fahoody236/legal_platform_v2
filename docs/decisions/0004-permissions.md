@@ -50,12 +50,15 @@ stale permissions are a confidentiality failure. Any future cache key must carry
 Two mechanisms, neither of them a convention:
 
 1. The permission guard is global and treats *absent* metadata as denial. A route with no declaration
-   returns 403, not 200. Opting out takes an explicit `@Public()` on the route, where review sees it.
-2. A boot-time check walks Nest's route table and refuses to start if any route declares neither a
-   permission nor `@Public()`, so the omission cannot reach a running environment.
+   returns 403, not 200. Opting out takes an explicit declaration on the route, where review sees it:
+   `@RequirePermission(...)`, `@Public()`, or `@SessionOnly()` for the two routes whose resource is the
+   session itself — signing out, and reading back who you already are.
+2. A boot-time check walks Nest's route table and refuses to start if any route declares none of those,
+   so the omission cannot reach a running environment. **Not built** — see Deferred.
 
-The first makes the mistake harmless, the second makes it loud. Same shape as the database, where RLS
-is deny-by-default and the absent DELETE policy *is* the denial.
+The first makes the mistake harmless, the second makes it loud. Only the first exists today, which is
+the right half to have if only one. Same shape as the database, where RLS is deny-by-default and the
+absent DELETE policy *is* the denial.
 
 ## Every firm keeps an admin
 
@@ -64,5 +67,20 @@ last holder is refused by a database trigger, so it holds against a script as we
 
 ## Deferred
 
-Record-level scope — "all cases" versus "cases I am assigned to" — is a property of a grant rather
+**The boot-time route check.** Blocked on a route-table API that holds up. `ApplicationConfig` owns the
+authoritative guard order but is constructed by `NestFactory` rather than provided, so it cannot be
+injected; `DiscoveryService.getProviders()` does expose both guards, but in module *scan* order, which
+was observed to differ from the *instantiation* order that determines when each guard registers. An
+index comparison over it would be a check that confidently reports the wrong answer, which is worse
+than no check. Settling it needs the guards instrumented at request time to establish ground truth.
+
+**Guard order is load-bearing and unasserted.** The permission guard reads the session the session
+guard attaches, so the two must run in that order. Nothing enforces it: it holds because Nest
+registers global guards as their providers resolve, and `AppModule` imports `AuthModule` before
+`PermissionsModule`. A reordered import list would break it silently at the source and visibly at
+runtime — the permission guard rejects a request with no session attached, so an inversion denies
+every authenticated caller on a gated route rather than admitting an unauthenticated one. Safe, and
+hard to diagnose from the symptom. Asserting it is half of the deferred check above.
+
+**Record-level scope** — "all cases" versus "cases I am assigned to" — is a property of a grant rather
 than a separate permission. It is needed, and it is not designed here.
