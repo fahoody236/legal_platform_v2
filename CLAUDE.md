@@ -135,8 +135,23 @@ So, when adding a table:
 - `ENABLE` **and** `FORCE ROW LEVEL SECURITY`, with `SELECT`/`INSERT`/`UPDATE`
   policies in the established fail-closed form. Absent tenant context must read
   as zero rows, never as every row.
-- No `DELETE` policy and no `DELETE` grant. Records are archived, revoked, or
-  superseded.
+- No `DELETE` policy and no `DELETE` grant **for records**. Cases, documents,
+  audit entries, users, sessions, credentials: archived, revoked, or superseded,
+  never destroyed. The record is itself the artefact.
+
+  **Configuration tables are the exception, and it is a narrow one.** Join
+  tables that express current configuration rather than history — so far
+  `role_permissions` and `user_roles` — do get `DELETE`, because editing a role
+  means removing a permission from it and un-assigning a role means removing the
+  row. Without that they would be append-only, which is a missing feature rather
+  than a safety property. What must survive is the *history* of the change, and
+  that belongs in the audit log. Keeping a revoked grant as a tombstone would put
+  it in the worst place: every effective-permission query would have to exclude
+  it, and forgetting that filter once restores access that was revoked.
+
+  The test when adding a table: would destroying this row destroy history, or
+  only a current setting? If the former, no `DELETE`. If you are unsure, it is
+  the former.
 - Grant explicitly to `legal_app`. There is no `ALTER DEFAULT PRIVILEGES`, so a
   new table is unreachable until someone grants it on purpose.
 

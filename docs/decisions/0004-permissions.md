@@ -25,6 +25,13 @@ organising without allowing files to leave the building (docs/threat-model.md, d
 - `user_roles` — `(firm_id, user_id, role_id)`, composite FKs to both parents. The composite keys
   make a cross-firm grant unrepresentable rather than merely unlikely.
 
+`role_permissions` and `user_roles` rows are deleted on revocation, unlike the rest of the schema. The
+no-delete rule protects legal records — cases, documents, audit entries — where the record *is* the
+artefact. Role composition and assignment are configuration; what must survive is the history of the
+change, which the audit log holds. A tombstoned grant would put that history in the worst place: every
+effective-permission query would have to exclude it, and forgetting once restores revoked access.
+`roles` itself is still archived rather than deleted, so a role named in the audit trail stays nameable.
+
 ## Checking a request
 
 The session guard resolves the user; a permission guard then compares the permission declared on the
