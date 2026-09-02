@@ -1,6 +1,5 @@
 import {
   Body,
-  ConflictException,
   Controller,
   Get,
   NotFoundException,
@@ -11,17 +10,11 @@ import {
   Req,
 } from "@nestjs/common";
 import type { Case } from "@legal/db";
-import { requireSession } from "../auth/authenticated-request.js";
 import type { AuthenticatedRequest } from "../auth/authenticated-request.js";
-import {
-  PG_FOREIGN_KEY_VIOLATION,
-  PG_UNIQUE_VIOLATION,
-  postgresErrorCode,
-} from "../common/database-errors.js";
+import { actorOf, translateWriteError } from "../common/request-context.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { RequirePermission } from "../permissions/require-permission.decorator.js";
-import { requireFirmId } from "../tenant/tenant-request.js";
-import { CasesService, type Actor } from "./cases.service.js";
+import { CasesService } from "./cases.service.js";
 import {
   assignCaseSchema,
   caseIdSchema,
@@ -142,50 +135,4 @@ export class CasesController {
 
     return { case: updated };
   }
-}
-
-/**
- * The acting firm comes from the Host header via the tenant middleware and the
- * acting user from the validated session. Neither is readable from the body, so
- * there is no field a caller could add to act somewhere else or as someone else.
- */
-function actorOf(request: AuthenticatedRequest): Actor {
-  return {
-    firmId: requireFirmId(request),
-    userId: requireSession(request).user.userId,
-    ip: request.socket.remoteAddress ?? null,
-  };
-}
-
-/**
- * Turns the two constraint violations a caller can actually cause into
- * responses.
- *
- * A foreign key violation means the client or the lawyer named in the request
- * does not exist *in this firm* — the composite keys carry `firm_id`, so
- * another firm's client and a client that was never created fail identically.
- * 404 keeps them that way. It deliberately does not say which of the two
- * references was the problem: naming it would confirm that the other one
- * resolved, which for a cross-firm id is exactly the confirmation to withhold.
- *
- * A unique violation is the case number, already used in this firm. 409 rather
- * than 404, because unlike the references above this tells the caller nothing
- * they could not learn by listing their own cases.
- *
- * Anything else is rethrown. A constraint nobody anticipated should surface as a
- * 500 and be fixed, not be flattened into a 400 that suggests the caller did
- * something wrong.
- */
-function translateWriteError(error: unknown): unknown {
-  const code = postgresErrorCode(error);
-
-  if (code === PG_FOREIGN_KEY_VIOLATION) {
-    return new NotFoundException();
-  }
-
-  if (code === PG_UNIQUE_VIOLATION) {
-    return new ConflictException();
-  }
-
-  return error;
 }

@@ -8,3 +8,4 @@ export * from "./sessions.js";
 export * from "./permissions.js";
 export * from "./audit.js";
 export * from "./cases.js";
+export * from "./clients.js";

@@ -1,5 +1,5 @@
 import { BadRequestException, type PipeTransform } from "@nestjs/common";
-import type { ZodType } from "zod";
+import type { ZodType, ZodTypeDef } from "zod";
 
 /**
  * Parses a request body against a schema, rejecting anything that does not fit
@@ -17,7 +17,14 @@ import type { ZodType } from "zod";
  * an exception.
  */
 export class ZodValidationPipe<T> implements PipeTransform<unknown, T> {
-  constructor(private readonly schema: ZodType<T>) {}
+  /**
+   * The schema's *input* type is left open. `ZodType<T>` would pin input to
+   * equal output, which excludes every schema that actually transforms —
+   * `.default()`, `.coerce`, the `"true" | "false"` to boolean conversion on
+   * query strings. What arrives here is a parsed request, so `unknown` is not a
+   * loosening: it is the truth about the argument.
+   */
+  constructor(private readonly schema: ZodType<T, ZodTypeDef, unknown>) {}
 
   transform(value: unknown): T {
     const result = this.schema.safeParse(value);

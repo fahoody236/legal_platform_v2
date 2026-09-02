@@ -19,7 +19,13 @@ export type AuditAction =
   | "auth.logout"
   | "cases.created"
   | "cases.updated"
-  | "cases.assigned";
+  | "cases.assigned"
+  | "clients.created"
+  | "clients.updated"
+  | "clients.archived"
+  | "clients.representative.added"
+  | "clients.representative.updated"
+  | "clients.representative.archived";
 
 export interface AuditEvent {
   action: AuditAction;

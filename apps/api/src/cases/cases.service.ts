@@ -14,18 +14,8 @@ import {
   type UpdateCaseInput,
 } from "@legal/db";
 import { AuditService } from "../audit/audit.service.js";
+import type { Actor } from "../common/request-context.js";
 import { DATABASE } from "../database/database.module.js";
-
-/**
- * Who is doing this, and from where. Assembled by the controller from the
- * session and the tenant middleware — never from the request body, so a caller
- * cannot name the firm they act in or the person they act as.
- */
-export interface Actor {
-  firmId: string;
-  userId: string;
-  ip: string | null;
-}
 
 @Injectable()
 export class CasesService {
