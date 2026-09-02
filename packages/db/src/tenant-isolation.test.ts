@@ -11,6 +11,10 @@ import { withTenant } from "./tenant-context.js";
  * without a tenant context, no writes across the boundary, no deletes at all —
  * is asserted here against a real PostgreSQL server.
  *
+ * The fixtures additionally have to satisfy whatever later migrations require of
+ * a firm or a user, which is why they carry a subdomain (0006). Nothing below
+ * tests subdomains; they are the price of inserting a valid firm.
+ *
  * Two connections, because the point is the difference between them:
  *
  *   DATABASE_URL      privileged. Seeds and cleans up. Must bypass RLS, since
@@ -32,12 +36,37 @@ if (!privilegedUrl || !appUrl) {
   // proving anything.
   throw new Error(
     "Tenant isolation tests need DATABASE_URL (privileged) and DATABASE_APP_URL " +
-      "(the legal_app role). Both must point at a database with migrations 0000–0004 applied.",
+      "(the legal_app role). Both must point at a database with all migrations applied.",
   );
 }
 
-const firmA = { id: randomUUID(), name: "Firm A", nameAr: "مكتب أ" };
-const firmB = { id: randomUUID(), name: "Firm B", nameAr: "مكتب ب" };
+/**
+ * Migration 0006 made `subdomain` required, unique across the platform, and
+ * subject to a format check — 3–63 characters of lowercase letters, digits and
+ * hyphens, not starting or ending with one, and not a reserved label.
+ *
+ * Deriving it from the firm's own uuid satisfies all of that and keeps the
+ * fixtures independent of each other and of any previous run: a literal
+ * "firm-a" would collide with itself the moment a run left rows behind or two
+ * suites ran against the same database. Same shape as the backfill in 0006.
+ */
+const subdomainFor = (firmId: string) => `test-${firmId.replaceAll("-", "")}`;
+
+const firmAId = randomUUID();
+const firmBId = randomUUID();
+
+const firmA = {
+  id: firmAId,
+  name: "Firm A",
+  nameAr: "مكتب أ",
+  subdomain: subdomainFor(firmAId),
+};
+const firmB = {
+  id: firmBId,
+  name: "Firm B",
+  nameAr: "مكتب ب",
+  subdomain: subdomainFor(firmBId),
+};
 
 const userA = {
   id: randomUUID(),
