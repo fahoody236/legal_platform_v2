@@ -16,7 +16,10 @@ import { recordAuditEntry, type TenantTransaction } from "@legal/db";
 export type AuditAction =
   | "auth.login.succeeded"
   | "auth.login.failed"
-  | "auth.logout";
+  | "auth.logout"
+  | "cases.created"
+  | "cases.updated"
+  | "cases.assigned";
 
 export interface AuditEvent {
   action: AuditAction;

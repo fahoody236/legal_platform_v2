@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { AuditModule } from "./audit/audit.module.js";
 import { AuthModule } from "./auth/auth.module.js";
+import { CasesModule } from "./cases/cases.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { HealthController } from "./health.controller.js";
 import { PermissionsModule } from "./permissions/permissions.module.js";
@@ -19,6 +20,7 @@ import { TenantModule } from "./tenant/tenant.module.js";
     TenantModule,
     AuthModule,
     PermissionsModule,
+    CasesModule,
   ],
   controllers: [HealthController],
 })
