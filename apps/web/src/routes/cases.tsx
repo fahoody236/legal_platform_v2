@@ -8,32 +8,24 @@ import {
   type CaseRow,
   type CaseStatus,
 } from "../lib/cases.js";
-import { useSession } from "../lib/session.js";
+import { displayName, useSession } from "../lib/session.js";
 import { casesRoute } from "../router.js";
 
 const PAGE_SIZE = 25;
 
 /**
- * A reference the API returns as a uuid.
+ * The lawyer column.
  *
- * Shown truncated and marked left-to-right, because a uuid is Latin text and
- * would otherwise have its segments reordered by the bidirectional algorithm —
- * a right-to-left run containing hyphens does not display in the order it is
- * stored, so an untagged uuid is not merely ugly, it is wrong.
- *
- * This is a placeholder. See the note at the foot of this file: showing names
- * here needs an API change that has not been made.
+ * The API resolves the name; the id stays in the payload for linking and
+ * filtering later. Null means unassigned, which is a real state rather than
+ * missing data, so it gets words rather than a blank cell.
  */
-function Reference({ id }: { id: string | null }) {
-  if (!id) {
+function LawyerName({ name }: { name: string | null }) {
+  if (!name) {
     return <span className="muted">غير مُسند</span>;
   }
 
-  return (
-    <code className="reference" dir="ltr" title={id}>
-      {id.slice(0, 8)}
-    </code>
-  );
+  return <>{name}</>;
 }
 
 function StatusBadge({ status }: { status: CaseStatus }) {
@@ -87,7 +79,7 @@ export function CasesPage() {
         <h1>القضايا</h1>
         {session.data && (
           <div className="identity">
-            <span>{session.data.fullName}</span>
+            <span>{displayName(session.data)}</span>
             <button type="button" className="link" onClick={signOut}>
               تسجيل الخروج
             </button>
@@ -220,21 +212,19 @@ function CasesBody({
         <tbody>
           {rows.map((row) => (
             <tr key={row.id}>
-              {/* Case numbers contain digits and a slash — an ltr run, like the
-                  uuids. */}
+              {/* Digits and a slash: an ltr run, which without the tag would
+                  be reordered around the slash by the bidi algorithm. */}
               <td dir="ltr" className="case-number">
                 {row.caseNumber}
               </td>
               <td>{row.titleAr}</td>
-              <td>
-                <Reference id={row.clientId} />
-              </td>
+              <td>{row.clientNameAr}</td>
               <td>{row.caseType}</td>
               <td>
                 <StatusBadge status={row.status} />
               </td>
               <td>
-                <Reference id={row.assignedLawyerId} />
+                <LawyerName name={row.assignedLawyerName} />
               </td>
             </tr>
           ))}
@@ -243,11 +233,3 @@ function CasesBody({
     </div>
   );
 }
-
-/*
- * ── Client and lawyer names ──────────────────────────────────────────────────
- *
- * The two reference columns show a shortened uuid because that is what the API
- * returns. This is a placeholder, not a design. See the note handed over with
- * this screen for the proposed fix; the API has deliberately not been changed.
- */

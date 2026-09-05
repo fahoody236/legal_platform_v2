@@ -38,7 +38,11 @@ export interface CaseRow {
   court: string | null;
   status: CaseStatus;
   clientId: string;
+  /** Resolved by the API. Always present: every case has a client. */
+  clientNameAr: string;
   assignedLawyerId: string | null;
+  /** Arabic name where recorded, Latin otherwise. Null when unassigned. */
+  assignedLawyerName: string | null;
   openedAt: string;
   closedAt: string | null;
   archivedAt: string | null;

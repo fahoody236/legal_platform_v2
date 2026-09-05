@@ -9,7 +9,7 @@ import {
   Query,
   Req,
 } from "@nestjs/common";
-import type { Case } from "@legal/db";
+import type { Case, CaseWithNames } from "@legal/db";
 import type { AuthenticatedRequest } from "../auth/authenticated-request.js";
 import { actorOf, translateWriteError } from "../common/request-context.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
@@ -46,7 +46,12 @@ export class CasesController {
   async list(
     @Query(new ZodValidationPipe(listCasesQuerySchema)) query: ListCasesQuery,
     @Req() request: AuthenticatedRequest,
-  ): Promise<{ cases: Case[]; total: number; limit: number; offset: number }> {
+  ): Promise<{
+    cases: CaseWithNames[];
+    total: number;
+    limit: number;
+    offset: number;
+  }> {
     const { items, total } = await this.cases.list(actorOf(request), query);
 
     return { cases: items, total, limit: query.limit, offset: query.offset };
@@ -65,7 +70,7 @@ export class CasesController {
   async findOne(
     @Param("id", new ZodValidationPipe(caseIdSchema)) id: string,
     @Req() request: AuthenticatedRequest,
-  ): Promise<{ case: Case }> {
+  ): Promise<{ case: CaseWithNames }> {
     const found = await this.cases.findById(actorOf(request), id);
 
     if (!found) {

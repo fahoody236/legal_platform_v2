@@ -5,6 +5,17 @@ export interface SessionUser {
   userId: string;
   email: string;
   fullName: string;
+  fullNameAr: string | null;
+}
+
+/**
+ * Arabic where it exists, Latin otherwise. `users.full_name_ar` is nullable —
+ * the Arabic-first rule migration 0011 applied to clients and cases was never
+ * applied to users — so a blank here would be a real, named person with no
+ * label rather than an absence worth showing.
+ */
+export function displayName(user: SessionUser): string {
+  return user.fullNameAr ?? user.fullName;
 }
 
 /**

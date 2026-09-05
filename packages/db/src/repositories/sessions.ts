@@ -8,6 +8,7 @@ export interface ActiveSession {
   userId: string;
   email: string;
   fullName: string;
+  fullNameAr: string | null;
 }
 
 /**
@@ -60,6 +61,7 @@ export async function findActiveSessionByTokenHash(
       userId: users.id,
       email: users.email,
       fullName: users.fullName,
+      fullNameAr: users.fullNameAr,
     })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))

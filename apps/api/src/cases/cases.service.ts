@@ -7,6 +7,7 @@ import {
   updateCase,
   withTenant,
   type Case,
+  type CaseWithNames,
   type CreateCaseInput,
   type Database,
   type ListCasesFilters,
@@ -31,7 +32,10 @@ export class CasesService {
     return withTenant(this.db, actor.firmId, (tx) => listCases(tx, filters));
   }
 
-  async findById(actor: Actor, id: string): Promise<Case | undefined> {
+  async findById(
+    actor: Actor,
+    id: string,
+  ): Promise<CaseWithNames | undefined> {
     return withTenant(this.db, actor.firmId, (tx) => findCaseById(tx, id));
   }
 

@@ -1,5 +1,7 @@
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, getTableColumns, sql } from "drizzle-orm";
 import { cases } from "../schema/cases.js";
+import { clients } from "../schema/clients.js";
+import { users } from "../schema/users.js";
 import { currentFirmId, type TenantTransaction } from "../tenant-context.js";
 
 /**
@@ -30,11 +32,59 @@ export interface ListCasesFilters {
   offset: number;
 }
 
+/**
+ * A case with the two references resolved to names.
+ *
+ * The ids stay. A screen needs both — the name to read and the id to link to or
+ * filter by — and dropping the id would force a second lookup to do anything
+ * with the row.
+ *
+ * Note what returning these names means: `cases.view` now discloses client names
+ * and lawyer names to anyone who can see the case. That is a deliberate widening
+ * of what one permission reveals, accepted on the grounds that a case list
+ * without the client's name is not usable, and the row already carries the
+ * matter's title, which says more.
+ */
+export interface CaseWithNames extends Case {
+  /** Always present: `client_id` is NOT NULL and foreign-keyed. */
+  clientNameAr: string;
+  /** Null when the case is unassigned. Arabic name, falling back to Latin. */
+  assignedLawyerName: string | null;
+}
+
 export interface ListCasesResult {
-  items: Case[];
+  items: CaseWithNames[];
   /** Matching rows in the caller's firm, before limit and offset. */
   total: number;
 }
+
+/**
+ * The two joins that resolve the references.
+ *
+ * Both carry `firm_id` in the join condition even though row-level security
+ * already confines all three tables to one firm. It costs nothing, it matches
+ * the composite keys the tables are actually built on, and it means a reader can
+ * see that no other firm's name can enter this result without first having to
+ * know the policy text.
+ *
+ * `clients` is an inner join and `users` a left join, which is the difference
+ * between a column that is NOT NULL and one that is: every case has a client,
+ * while an unassigned case is an ordinary state.
+ *
+ * The lawyer's name prefers Arabic and falls back to Latin. `full_name_ar` is
+ * nullable on `users` — unlike on clients and cases, where migration 0011 made
+ * Arabic the required name — so without the fallback an unassigned-looking blank
+ * would appear for a real, named person.
+ */
+const caseWithNamesColumns = {
+  ...getTableColumns(cases),
+  clientNameAr: clients.nameAr,
+  assignedLawyerName: sql<
+    string | null
+  >`coalesce(${users.fullNameAr}, ${users.fullName})`.as(
+    "assigned_lawyer_name",
+  ),
+};
 
 /**
  * A page of the firm's cases, newest first.
@@ -68,13 +118,28 @@ export async function listCases(
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const items = await tx
-    .select()
+    .select(caseWithNamesColumns)
     .from(cases)
+    .innerJoin(
+      clients,
+      and(eq(clients.firmId, cases.firmId), eq(clients.id, cases.clientId)),
+    )
+    .leftJoin(
+      users,
+      and(
+        eq(users.firmId, cases.firmId),
+        eq(users.id, cases.assignedLawyerId),
+      ),
+    )
     .where(where)
     .orderBy(desc(cases.openedAt), desc(cases.id))
     .limit(filters.limit)
     .offset(filters.offset);
 
+  // No joins on the count. They cannot change it — the client join is on a
+  // NOT NULL foreign key and the lawyer join is outer — so including them would
+  // only make the query more expensive and give a future edit somewhere to
+  // introduce a row multiplication that silently inflates the total.
   const [totals] = await tx
     .select({ value: count() })
     .from(cases)
@@ -91,8 +156,24 @@ export async function listCases(
 export async function findCaseById(
   tx: TenantTransaction,
   id: string,
-): Promise<Case | undefined> {
-  const [row] = await tx.select().from(cases).where(eq(cases.id, id)).limit(1);
+): Promise<CaseWithNames | undefined> {
+  const [row] = await tx
+    .select(caseWithNamesColumns)
+    .from(cases)
+    .innerJoin(
+      clients,
+      and(eq(clients.firmId, cases.firmId), eq(clients.id, cases.clientId)),
+    )
+    .leftJoin(
+      users,
+      and(
+        eq(users.firmId, cases.firmId),
+        eq(users.id, cases.assignedLawyerId),
+      ),
+    )
+    .where(eq(cases.id, id))
+    .limit(1);
+
   return row;
 }
 

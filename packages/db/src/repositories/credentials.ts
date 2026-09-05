@@ -8,6 +8,7 @@ export interface CredentialRecord {
   userId: string;
   email: string;
   fullName: string;
+  fullNameAr: string | null;
   passwordHash: string;
   failedAttempts: number;
   lockedUntil: Date | null;
@@ -39,6 +40,7 @@ export async function findCredentialByEmail(
       userId: users.id,
       email: users.email,
       fullName: users.fullName,
+      fullNameAr: users.fullNameAr,
       passwordHash: credentials.passwordHash,
       failedAttempts: credentials.failedAttempts,
       lockedUntil: credentials.lockedUntil,

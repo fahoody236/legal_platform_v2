@@ -22,7 +22,14 @@ const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 export interface AuthenticatedUser {
   userId: string;
   email: string;
+  /** Latin-script name. */
   fullName: string;
+  /**
+   * Arabic name, or null where none is recorded. Nullable because `users`
+   * predates the Arabic-first decision migration 0011 applied to clients and
+   * cases; the interface falls back to `fullName` rather than showing a blank.
+   */
+  fullNameAr: string | null;
 }
 
 export interface AuthenticatedSession {
@@ -172,6 +179,7 @@ export class AuthService implements OnModuleInit {
           userId: credential.userId,
           email: credential.email,
           fullName: credential.fullName,
+          fullNameAr: credential.fullNameAr,
         },
       };
     });
@@ -209,6 +217,7 @@ export class AuthService implements OnModuleInit {
           userId: session.userId,
           email: session.email,
           fullName: session.fullName,
+          fullNameAr: session.fullNameAr,
         },
       };
     });

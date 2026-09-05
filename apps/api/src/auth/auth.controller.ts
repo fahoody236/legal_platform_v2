@@ -85,7 +85,7 @@ export class AuthController {
       throw new UnauthorizedException();
     }
 
-    setSessionCookie(response, result.token, result.expiresAt);
+    setSessionCookie(response, request, result.token, result.expiresAt);
 
     // The token is not in this body, on purpose. See cookies.ts.
     return { user: result.user };
@@ -113,7 +113,7 @@ export class AuthController {
       user.userId,
       request.socket.remoteAddress ?? null,
     );
-    clearSessionCookie(response);
+    clearSessionCookie(response, request);
   }
 
   /**
