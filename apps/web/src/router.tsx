@@ -9,6 +9,7 @@ import { apiFetch, ApiError } from "./lib/api.js";
 import { CASE_STATUSES, type CaseStatus } from "./lib/cases.js";
 import type { SessionUser } from "./lib/session.js";
 import { CaseDetailPage } from "./routes/case-detail.js";
+import { CaseNewPage } from "./routes/case-new.js";
 import { CasesPage } from "./routes/cases.js";
 import { LoginPage } from "./routes/login.js";
 import { RouteError } from "./routes/route-error.js";
@@ -104,6 +105,21 @@ const casesRoute = createRoute({
   errorComponent: RouteError,
 });
 
+/**
+ * Declared before `/cases/$caseId` so "new" is matched as a literal segment
+ * rather than captured as a case id. TanStack ranks static segments above
+ * dynamic ones, so the order is belt and braces — but the failure it guards
+ * against is a 404 for a route that exists, which is worth being explicit about.
+ */
+const caseNewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/cases/new",
+  validateSearch: validateCasesSearch,
+  beforeLoad: requireSession,
+  component: CaseNewPage,
+  errorComponent: RouteError,
+});
+
 const caseDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/cases/$caseId",
@@ -117,6 +133,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   casesRoute,
+  caseNewRoute,
   caseDetailRoute,
 ]);
 

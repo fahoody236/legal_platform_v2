@@ -117,16 +117,37 @@ export class AuthController {
   }
 
   /**
-   * Returns nothing the caller did not already present. Everything in the body
-   * came from the session this request authenticated with, so gating it behind
-   * `users.view` would mean a firm could remove someone's ability to see their
-   * own name — locking them out of the interface without denying them a single
-   * record. If this ever grows to return the caller's permissions or firm
-   * settings, that is a different route with a different rule.
+   * Who the caller is, and what they may do.
+   *
+   * Still `@SessionOnly()`, and adding the permission list does not change that.
+   * An earlier version of this comment said the caller's permissions would be
+   * "a different route with a different rule"; on reflection they are not.
+   * Effective permissions are derived from the session exactly as the name is,
+   * describe only the caller, and reveal nothing about anyone else — not which
+   * roles the firm has defined, not who else holds what. A permission gating
+   * someone's view of their own access would be as incoherent as one gating
+   * their own name.
+   *
+   * The list exists so the interface can avoid offering actions that will be
+   * refused. It is not a control: PermissionGuard decides, on every request,
+   * from the database. A caller who edits this response has changed what their
+   * own browser draws and nothing else.
+   *
+   * Costs one indexed query per call. This route is hit on each navigation, so
+   * that is the price of the button being right; see AuthService.permissionsFor
+   * for why it is not folded into session validation instead.
    */
   @SessionOnly()
   @Get("me")
-  me(@Req() request: AuthenticatedRequest): { user: AuthenticatedUser } {
-    return { user: requireSession(request).user };
+  async me(
+    @Req() request: AuthenticatedRequest,
+  ): Promise<{ user: AuthenticatedUser; permissions: string[] }> {
+    const firmId = requireFirmId(request);
+    const { user } = requireSession(request);
+
+    return {
+      user,
+      permissions: await this.authService.permissionsFor(firmId, user.userId),
+    };
   }
 }

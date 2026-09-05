@@ -8,7 +8,11 @@ import {
   type CaseRow,
   type CaseStatus,
 } from "../lib/cases.js";
-import { displayName, useSession } from "../lib/session.js";
+import {
+  displayName,
+  useHasPermission,
+  useSession,
+} from "../lib/session.js";
 
 const PAGE_SIZE = 25;
 
@@ -44,6 +48,7 @@ export function CasesPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const session = useSession();
+  const canCreate = useHasPermission("cases.create");
 
   const status = search.status;
   const offset = search.offset ?? 0;
@@ -80,7 +85,7 @@ export function CasesPage() {
         <h1>القضايا</h1>
         {session.data && (
           <div className="identity">
-            <span>{displayName(session.data)}</span>
+            <span>{displayName(session.data.user)}</span>
             <button type="button" className="link" onClick={signOut}>
               تسجيل الخروج
             </button>
@@ -111,6 +116,20 @@ export function CasesPage() {
             </option>
           ))}
         </select>
+
+        {/*
+          Hidden without cases.create. The API refuses the request regardless;
+          this only avoids offering an action that cannot succeed.
+        */}
+        {canCreate && (
+          <Link
+            to="/cases/new"
+            search={{ status, offset }}
+            className="button-link"
+          >
+            قضية جديدة
+          </Link>
+        )}
       </div>
 
       <CasesBody

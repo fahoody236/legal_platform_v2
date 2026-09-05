@@ -1,8 +1,15 @@
 import { Link, useParams, useSearch } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { isApiError, isNetworkError } from "../lib/api.js";
-import { STATUS_LABELS, useCase, type CaseRow } from "../lib/cases.js";
+import {
+  STATUS_LABELS,
+  useCase,
+  useUpdateCase,
+  type CaseRow,
+} from "../lib/cases.js";
 import { formatDate, formatDateTime } from "../lib/dates.js";
+import { useHasPermission } from "../lib/session.js";
+import { CaseForm, toCaseBody, type CaseFormValues } from "./case-form.js";
 
 /**
  * A field that may have no value.
@@ -113,19 +120,76 @@ function CaseBody({
   return <CaseDetail record={record} />;
 }
 
+/** The stored case, as the form's fields. */
+function toFormValues(record: CaseRow): CaseFormValues {
+  return {
+    clientId: record.clientId,
+    caseNumber: record.caseNumber,
+    titleAr: record.titleAr,
+    title: record.title ?? "",
+    caseType: record.caseType,
+    court: record.court ?? "",
+    status: record.status,
+  };
+}
+
 function CaseDetail({ record }: { record: CaseRow }) {
   const status = STATUS_LABELS[record.status];
+  const canEdit = useHasPermission("cases.edit");
+  const [editing, setEditing] = useState(false);
+  const update = useUpdateCase(record.id);
+
+  if (editing) {
+    return (
+      <article>
+        <h1>تعديل القضية</h1>
+
+        <CaseForm
+          mode="edit"
+          initial={toFormValues(record)}
+          submitLabel="حفظ التعديلات"
+          onSubmit={(values) =>
+            update.mutate(toCaseBody(values), {
+              onSuccess: () => {
+                setEditing(false);
+                update.reset();
+              },
+            })
+          }
+          onCancel={() => {
+            setEditing(false);
+            // Discards a failed attempt's error, so reopening the form starts
+            // clean rather than showing a complaint about a previous submission.
+            update.reset();
+          }}
+          pending={update.isPending}
+          error={update.error}
+        />
+      </article>
+    );
+  }
 
   return (
     <article>
       <header className="page-header">
         <h1>{record.titleAr}</h1>
-        <span
-          className="badge"
-          style={{ color: status.colour, background: status.background }}
-        >
-          {status.label}
-        </span>
+        <div className="identity">
+          <span
+            className="badge"
+            style={{ color: status.colour, background: status.background }}
+          >
+            {status.label}
+          </span>
+          {/*
+            Hidden without cases.edit. The API refuses regardless — this only
+            keeps a button that cannot work off the screen.
+          */}
+          {canEdit && (
+            <button type="button" onClick={() => setEditing(true)}>
+              تعديل
+            </button>
+          )}
+        </div>
       </header>
 
       {record.archivedAt && (

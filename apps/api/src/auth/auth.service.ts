@@ -4,6 +4,7 @@ import {
   createSession,
   findActiveSessionByTokenHash,
   findCredentialByEmail,
+  listEffectivePermissions,
   recordFailedAttempt,
   revokeSession,
   touchSession,
@@ -221,6 +222,26 @@ export class AuthService implements OnModuleInit {
         },
       };
     });
+  }
+
+  /**
+   * The caller's own effective permissions.
+   *
+   * Deliberately not folded into `validateSession`. That runs on every
+   * authenticated request, and PermissionGuard already resolves the same set for
+   * every gated route — adding it there would buy a second identical query on
+   * every request to pay for one screen's needs.
+   *
+   * Reads the repository directly rather than injecting PermissionsService,
+   * which would make AuthModule import PermissionsModule. That import would
+   * reverse the order the two global guards are registered in, and a
+   * PermissionGuard running before SessionGuard rejects every authenticated
+   * caller (docs/decisions/0004-permissions.md, Deferred).
+   */
+  async permissionsFor(firmId: string, userId: string): Promise<string[]> {
+    return withTenant(this.db, firmId, (tx) =>
+      listEffectivePermissions(tx, userId),
+    );
   }
 
   /**

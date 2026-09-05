@@ -8,6 +8,20 @@ export interface SessionUser {
   fullNameAr: string | null;
 }
 
+export interface Session {
+  user: SessionUser;
+  /**
+   * The caller's effective permissions, as `resource.action` keys.
+   *
+   * Used to decide what to offer, never to decide what is allowed. The API
+   * refuses on its own and would refuse identically if this list were edited in
+   * the browser — which someone can trivially do. Treating it as a control
+   * would be building an access check out of a value the person being checked
+   * supplies.
+   */
+  permissions: string[];
+}
+
 /**
  * Arabic where it exists, Latin otherwise. `users.full_name_ar` is nullable —
  * the Arabic-first rule migration 0011 applied to clients and cases was never
@@ -33,13 +47,12 @@ export function displayName(user: SessionUser): string {
  * would put it in the same bucket as a server being down — which needs a very
  * different response from the interface.
  */
-export function useSession(): UseQueryResult<SessionUser | null> {
+export function useSession(): UseQueryResult<Session | null> {
   return useQuery({
-    queryKey: ["session"],
+    queryKey: SESSION_QUERY_KEY,
     queryFn: async () => {
       try {
-        const body = await apiFetch<{ user: SessionUser }>("/api/auth/me");
-        return body.user;
+        return await apiFetch<Session>("/api/auth/me");
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
           return null;
@@ -52,6 +65,19 @@ export function useSession(): UseQueryResult<SessionUser | null> {
     retry: false,
     staleTime: 30_000,
   });
+}
+
+/**
+ * Whether the signed-in person holds a permission.
+ *
+ * Defaults to `false` while the session is loading, so a control appears once
+ * it is known to be usable rather than flickering into view and then vanishing.
+ * Erring towards hiding also means a slow session query never shows a button
+ * that would fail.
+ */
+export function useHasPermission(permission: string): boolean {
+  const session = useSession();
+  return session.data?.permissions.includes(permission) ?? false;
 }
 
 export const SESSION_QUERY_KEY = ["session"] as const;

@@ -1,4 +1,9 @@
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 import { apiFetch } from "./api.js";
 
 /** Mirrors CASE_STATUSES in packages/db. The API rejects anything else. */
@@ -106,5 +111,57 @@ export function useCases(query: CasesQuery): UseQueryResult<CasesPage> {
     // Keeps the previous page on screen while the next one loads, so paging
     // does not blank the table and jump the scroll position.
     placeholderData: (previous) => previous,
+  });
+}
+
+export interface CreateCaseBody {
+  clientId: string;
+  caseNumber: string;
+  titleAr: string;
+  title?: string | null;
+  caseType: string;
+  court?: string | null;
+  status: CaseStatus;
+}
+
+export type UpdateCaseBody = Omit<CreateCaseBody, "clientId" | "caseNumber">;
+
+/**
+ * Invalidated rather than written into the cache by hand.
+ *
+ * A created or edited case changes the list's contents, its total, and possibly
+ * which page it falls on under the current filter. Patching all of that
+ * correctly in the client means reimplementing the server's ordering and
+ * filtering, which is how a cache comes to disagree with the database. Refetching
+ * costs one request and cannot be subtly wrong.
+ */
+export function useCreateCase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: CreateCaseBody) =>
+      apiFetch<{ case: CaseRow }>("/api/cases", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }).then((response) => response.case),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["cases"] });
+    },
+  });
+}
+
+export function useUpdateCase(caseId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: UpdateCaseBody) =>
+      apiFetch<{ case: CaseRow }>(`/api/cases/${encodeURIComponent(caseId)}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }).then((response) => response.case),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["cases"] });
+      void queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+    },
   });
 }
