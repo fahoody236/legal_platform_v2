@@ -7,9 +7,13 @@ import {
 } from "@tanstack/react-router";
 import { apiFetch, ApiError } from "./lib/api.js";
 import { CASE_STATUSES, type CaseStatus } from "./lib/cases.js";
+import { CLIENT_TYPES, type ClientType } from "./lib/clients.js";
 import type { SessionUser } from "./lib/session.js";
 import { CaseDetailPage } from "./routes/case-detail.js";
 import { CaseNewPage } from "./routes/case-new.js";
+import { ClientDetailPage } from "./routes/client-detail.js";
+import { ClientNewPage } from "./routes/client-new.js";
+import { ClientsPage } from "./routes/clients.js";
 import { CasesPage } from "./routes/cases.js";
 import { LoginPage } from "./routes/login.js";
 import { RouteError } from "./routes/route-error.js";
@@ -129,12 +133,78 @@ const caseDetailRoute = createRoute({
   errorComponent: RouteError,
 });
 
+/**
+ * The clients list's filters and page, carried by the list and by the screens
+ * reached from it, for the same reason the cases search is: the way back has to
+ * land on the page the reader left, after a reload and from a shared link.
+ */
+interface ClientsSearch {
+  clientType?: ClientType | undefined;
+  archived?: boolean | undefined;
+  offset?: number | undefined;
+}
+
+function validateClientsSearch(
+  search: Record<string, unknown>,
+): ClientsSearch {
+  const clientType = CLIENT_TYPES.includes(search["clientType"] as ClientType)
+    ? (search["clientType"] as ClientType)
+    : undefined;
+
+  // Only a real boolean counts. `?archived=maybe` becomes "no filter" rather
+  // than a silent false, which would quietly hide every archived client.
+  const rawArchived = search["archived"];
+  const archived =
+    rawArchived === true || rawArchived === "true"
+      ? true
+      : rawArchived === false || rawArchived === "false"
+        ? false
+        : undefined;
+
+  const rawOffset = Number(search["offset"]);
+  const offset =
+    Number.isInteger(rawOffset) && rawOffset > 0 ? rawOffset : undefined;
+
+  return { clientType, archived, offset };
+}
+
+const clientsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/clients",
+  validateSearch: validateClientsSearch,
+  beforeLoad: requireSession,
+  component: ClientsPage,
+  errorComponent: RouteError,
+});
+
+/** Before the dynamic route, so "new" is a literal segment and not a client id. */
+const clientNewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/clients/new",
+  validateSearch: validateClientsSearch,
+  beforeLoad: requireSession,
+  component: ClientNewPage,
+  errorComponent: RouteError,
+});
+
+const clientDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/clients/$clientId",
+  validateSearch: validateClientsSearch,
+  beforeLoad: requireSession,
+  component: ClientDetailPage,
+  errorComponent: RouteError,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   casesRoute,
   caseNewRoute,
   caseDetailRoute,
+  clientsRoute,
+  clientNewRoute,
+  clientDetailRoute,
 ]);
 
 export const router = createRouter({ routeTree });

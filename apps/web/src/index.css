@@ -394,3 +394,111 @@ button.secondary:disabled {
 .button-link:hover {
   background: #16306f;
 }
+
+/* ── Section navigation ───────────────────────────────────────────────────── */
+
+.app-nav {
+  display: flex;
+  align-items: baseline;
+  gap: 1.25rem;
+  margin-block-end: 1.5rem;
+  padding-block-end: 0.75rem;
+  border-block-end: 1px solid #e4e4e0;
+  font-size: 0.95rem;
+}
+
+.app-nav a {
+  color: #1f3d8f;
+  text-decoration: none;
+}
+
+.app-nav a:hover {
+  text-decoration: underline;
+}
+
+/*
+ * The current section is marked rather than removed, so the set of places stays
+ * the same shape wherever you are standing in it.
+ */
+.app-nav a.current {
+  color: #1a1a18;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: default;
+}
+
+/* Pushed to the far end of the row, away from the section links. */
+.app-nav .identity {
+  margin-inline-start: auto;
+}
+
+textarea {
+  inline-size: 100%;
+  box-sizing: border-box;
+  padding-block: 0.5rem;
+  padding-inline: 0.75rem;
+  font: inherit;
+  border: 1px solid #c9c9c4;
+  border-radius: 4px;
+  background: #fff;
+  resize: vertical;
+}
+
+.fixed-value {
+  margin: 0;
+}
+
+/* ── Representatives ──────────────────────────────────────────────────────── */
+
+.representatives {
+  margin-block-start: 2.5rem;
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid #e4e4e0;
+}
+
+.representatives h2 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.representative-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+.representative-list > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding-block: 0.7rem;
+  border-block-end: 1px solid #e4e4e0;
+}
+
+/* Archived people stay listed but recede: still readable, plainly not current. */
+.representative-list > li.archived {
+  color: #77776f;
+}
+
+.representative-summary {
+  flex: 1;
+}
+
+.representative-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.representative-form {
+  margin-block: 1rem;
+  padding-block: 1rem;
+  padding-inline: 1rem;
+  border: 1px solid #e4e4e0;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.representative-form .form-actions {
+  margin-block-start: 1rem;
+}

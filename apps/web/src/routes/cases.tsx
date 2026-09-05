@@ -1,6 +1,5 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { apiFetch, isApiError } from "../lib/api.js";
+import { isApiError } from "../lib/api.js";
 import {
   CASE_STATUSES,
   STATUS_LABELS,
@@ -8,11 +7,8 @@ import {
   type CaseRow,
   type CaseStatus,
 } from "../lib/cases.js";
-import {
-  displayName,
-  useHasPermission,
-  useSession,
-} from "../lib/session.js";
+import { useHasPermission } from "../lib/session.js";
+import { AppHeader } from "./app-header.js";
 
 const PAGE_SIZE = 25;
 
@@ -46,8 +42,6 @@ export function CasesPage() {
   // make this module and the router import each other.
   const search = useSearch({ from: "/cases" });
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const session = useSession();
   const canCreate = useHasPermission("cases.create");
 
   const status = search.status;
@@ -62,18 +56,6 @@ export function CasesPage() {
     void navigate({ to: "/cases", search: next });
   }
 
-  async function signOut() {
-    try {
-      await apiFetch("/api/auth/logout", { method: "POST" });
-    } catch {
-      // Already signed out, or unreachable. Either way the local answer is the
-      // same, and there is nothing useful to say about a session that is gone.
-    }
-
-    queryClient.clear();
-    void navigate({ to: "/login" });
-  }
-
   const total = cases.data?.total ?? 0;
   const lastOffset = Math.max(0, Math.floor((total - 1) / PAGE_SIZE) * PAGE_SIZE);
   const pageStart = total === 0 ? 0 : offset + 1;
@@ -81,17 +63,7 @@ export function CasesPage() {
 
   return (
     <main className="wide">
-      <header className="page-header">
-        <h1>القضايا</h1>
-        {session.data && (
-          <div className="identity">
-            <span>{displayName(session.data.user)}</span>
-            <button type="button" className="link" onClick={signOut}>
-              تسجيل الخروج
-            </button>
-          </div>
-        )}
-      </header>
+      <AppHeader title="القضايا" />
 
       <div className="filters">
         <label htmlFor="status">الحالة</label>
