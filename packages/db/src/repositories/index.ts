@@ -9,3 +9,4 @@ export * from "./permissions.js";
 export * from "./audit.js";
 export * from "./cases.js";
 export * from "./clients.js";
+export * from "./roles.js";
