@@ -1,10 +1,8 @@
+import { useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-
-interface User {
-  userId: string;
-  email: string;
-  fullName: string;
-}
+import { apiFetch } from "../lib/api.js";
+import { SESSION_QUERY_KEY, type SessionUser } from "../lib/session.js";
 
 /**
  * One message for every failure — wrong password, unknown address, locked
@@ -15,59 +13,44 @@ interface User {
  * in the interface would give back exactly what the server withholds, and the
  * person signing in cannot act differently on any of them anyway.
  */
-const GENERIC_ERROR = "تعذّر تسجيل الدخول. تحقّق من البريد الإلكتروني وكلمة المرور.";
+const GENERIC_ERROR =
+  "تعذّر تسجيل الدخول. تحقّق من البريد الإلكتروني وكلمة المرور.";
 
 type Status = "idle" | "submitting" | "error";
 
-export function App() {
+export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<Status>("idle");
-  const [user, setUser] = useState<User | null>(null);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus("submitting");
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const body = await apiFetch<{ user: SessionUser }>("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // The session token never appears in this exchange's body. It arrives
-        // as an HttpOnly cookie the browser stores and replays on its own, and
-        // this option is what lets it be set and returned.
-        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
-      if (!response.ok) {
-        setStatus("error");
-        return;
-      }
-
-      const body = (await response.json()) as { user: User };
-      setUser(body.user);
       setPassword("");
-      setStatus("idle");
+
+      // Seeded rather than invalidated: the sign-in response already carries the
+      // user, so refetching /auth/me would be a second round trip for an answer
+      // just received. The cookie is set by then, so a later refetch still works.
+      queryClient.setQueryData(SESSION_QUERY_KEY, body.user);
+
+      await navigate({ to: "/cases" });
     } catch {
       // A network failure is reported the same way as a rejected credential.
       setStatus("error");
     }
   }
 
-  if (user) {
-    return (
-      <main>
-        <h1>مرحباً</h1>
-        <p className="signed-in">
-          تم تسجيل الدخول باسم <strong>{user.fullName}</strong>
-        </p>
-      </main>
-    );
-  }
-
   return (
-    <main>
+    <main className="narrow">
       <h1>تسجيل الدخول</h1>
 
       <form onSubmit={handleSubmit}>
