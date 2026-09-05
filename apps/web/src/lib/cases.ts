@@ -61,6 +61,34 @@ export interface CasesQuery {
   offset: number;
 }
 
+/**
+ * Not retried on 401, 403 or 404. Each is a settled answer about this request,
+ * not a fault that a second attempt could resolve, and retrying only delays the
+ * message the person needs to read.
+ */
+function retryUnlessAnswered(failureCount: number, error: Error): boolean {
+  const status = (error as { status?: number }).status;
+
+  if (status === 401 || status === 403 || status === 404) {
+    return false;
+  }
+
+  return failureCount < 2;
+}
+
+export function useCase(caseId: string): UseQueryResult<CaseRow> {
+  return useQuery({
+    queryKey: ["case", caseId],
+    queryFn: async () => {
+      const body = await apiFetch<{ case: CaseRow }>(
+        `/api/cases/${encodeURIComponent(caseId)}`,
+      );
+      return body.case;
+    },
+    retry: retryUnlessAnswered,
+  });
+}
+
 export function useCases(query: CasesQuery): UseQueryResult<CasesPage> {
   const search = new URLSearchParams({
     limit: String(query.limit),
@@ -74,12 +102,7 @@ export function useCases(query: CasesQuery): UseQueryResult<CasesPage> {
   return useQuery({
     queryKey: ["cases", query.status ?? null, query.limit, query.offset],
     queryFn: () => apiFetch<CasesPage>(`/api/cases?${search.toString()}`),
-    // 403 and 401 are answers, not transient faults; retrying them delays the
-    // message the person needs to see. Everything else keeps the default.
-    retry: (failureCount, error) => {
-      const status = (error as { status?: number }).status;
-      return status === 401 || status === 403 ? false : failureCount < 2;
-    },
+    retry: retryUnlessAnswered,
     // Keeps the previous page on screen while the next one loads, so paging
     // does not blank the table and jump the scroll position.
     placeholderData: (previous) => previous,

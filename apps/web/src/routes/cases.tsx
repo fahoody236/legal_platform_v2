@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { apiFetch, isApiError } from "../lib/api.js";
 import {
   CASE_STATUSES,
@@ -9,7 +9,6 @@ import {
   type CaseStatus,
 } from "../lib/cases.js";
 import { displayName, useSession } from "../lib/session.js";
-import { casesRoute } from "../router.js";
 
 const PAGE_SIZE = 25;
 
@@ -39,7 +38,9 @@ function StatusBadge({ status }: { status: CaseStatus }) {
 }
 
 export function CasesPage() {
-  const search = useSearch({ from: casesRoute.id });
+  // Addressed by path rather than by importing the route object, which would
+  // make this module and the router import each other.
+  const search = useSearch({ from: "/cases" });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const session = useSession();
@@ -116,6 +117,7 @@ export function CasesPage() {
         isPending={cases.isPending}
         error={cases.error}
         rows={cases.data?.cases ?? []}
+        search={{ status, offset }}
       />
 
       {cases.isSuccess && total > 0 && (
@@ -157,10 +159,12 @@ function CasesBody({
   isPending,
   error,
   rows,
+  search,
 }: {
   isPending: boolean;
   error: unknown;
   rows: CaseRow[];
+  search: { status: CaseStatus | undefined; offset: number };
 }) {
   if (isPending) {
     return (
@@ -211,25 +215,68 @@ function CasesBody({
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.id}>
-              {/* Digits and a slash: an ltr run, which without the tag would
-                  be reordered around the slash by the bidi algorithm. */}
-              <td dir="ltr" className="case-number">
-                {row.caseNumber}
-              </td>
-              <td>{row.titleAr}</td>
-              <td>{row.clientNameAr}</td>
-              <td>{row.caseType}</td>
-              <td>
-                <StatusBadge status={row.status} />
-              </td>
-              <td>
-                <LawyerName name={row.assignedLawyerName} />
-              </td>
-            </tr>
+            <CaseTableRow key={row.id} row={row} search={search} />
           ))}
         </tbody>
       </table>
     </div>
+  );
+}
+
+/**
+ * A row that opens the case.
+ *
+ * The case number is a real `<Link>`, not a click handler on the cell: it is
+ * reachable by keyboard, it opens in a new tab on middle click, and its target
+ * can be copied. The whole `<tr>` also navigates, because a table of rows that
+ * are only clickable in one narrow column is tedious to use — but that is the
+ * convenience, and the link is the mechanism.
+ *
+ * The current filter and page ride along in the link's search, so the detail
+ * screen can offer a way back to precisely where the reader was.
+ */
+function CaseTableRow({
+  row,
+  search,
+}: {
+  row: CaseRow;
+  search: { status: CaseStatus | undefined; offset: number };
+}) {
+  const navigate = useNavigate();
+
+  const target = {
+    to: "/cases/$caseId",
+    params: { caseId: row.id },
+    search,
+  } as const;
+
+  return (
+    <tr
+      className="row-link"
+      onClick={(event) => {
+        // The link inside handles its own clicks — and a modified click on it
+        // means "new tab" or "download", which navigating here would steal.
+        if ((event.target as HTMLElement).closest("a")) {
+          return;
+        }
+
+        void navigate(target);
+      }}
+    >
+      {/* Digits and a slash: an ltr run, which without the tag would
+          be reordered around the slash by the bidi algorithm. */}
+      <td dir="ltr" className="case-number">
+        <Link {...target}>{row.caseNumber}</Link>
+      </td>
+      <td>{row.titleAr}</td>
+      <td>{row.clientNameAr}</td>
+      <td>{row.caseType}</td>
+      <td>
+        <StatusBadge status={row.status} />
+      </td>
+      <td>
+        <LawyerName name={row.assignedLawyerName} />
+      </td>
+    </tr>
   );
 }

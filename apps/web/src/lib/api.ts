@@ -45,3 +45,16 @@ export async function apiFetch<T>(
 export function isApiError(error: unknown, status: number): boolean {
   return error instanceof ApiError && error.status === status;
 }
+
+/**
+ * True when the request never reached the server — offline, DNS, a dropped
+ * connection, a rejected TLS handshake. `fetch` rejects for those and resolves
+ * for everything the server answers, so the absence of an ApiError is exactly
+ * the distinction.
+ *
+ * Worth telling apart from a server error because the action differs: check the
+ * connection and retry, rather than report a fault that is not on this side.
+ */
+export function isNetworkError(error: unknown): boolean {
+  return !(error instanceof ApiError);
+}
