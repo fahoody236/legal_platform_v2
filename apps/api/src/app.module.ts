@@ -7,6 +7,7 @@ import { DatabaseModule } from "./database/database.module.js";
 import { HealthController } from "./health.controller.js";
 import { PermissionsModule } from "./permissions/permissions.module.js";
 import { TenantModule } from "./tenant/tenant.module.js";
+import { UsersModule } from "./users/users.module.js";
 
 /**
  * Import order is significant. Nest registers global guards in the order the
@@ -23,6 +24,7 @@ import { TenantModule } from "./tenant/tenant.module.js";
     PermissionsModule,
     CasesModule,
     ClientsModule,
+    UsersModule,
   ],
   controllers: [HealthController],
 })

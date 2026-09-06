@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, eq, isNull, sql } from "drizzle-orm";
 import { users, type User } from "../schema/index.js";
 import { currentFirmId, type TenantTransaction } from "../tenant-context.js";
 
@@ -28,13 +28,32 @@ export interface CreateUserInput {
   fullNameAr?: string | null;
 }
 
+export interface ListUsersFilters {
+  /** Default true, which is the historical behaviour of this function. */
+  includeDisabled?: boolean | undefined;
+}
+
 /**
- * Every user of the caller's firm, disabled ones included — a disabled
- * colleague still has to render in historical views and audit entries.
- * Filter at the call site when a picker needs only active people.
+ * The firm's users, ordered by name.
+ *
+ * Disabled colleagues are included by default, and that default is deliberate:
+ * someone who has left still has to render in historical views, in audit
+ * entries, and as the lawyer a closed case was assigned to. A list that dropped
+ * them would make old records unreadable rather than tidy.
+ *
+ * `includeDisabled: false` is for the one case that genuinely differs —
+ * choosing someone to do work now. That filter is applied in SQL rather than by
+ * the caller, so a picker cannot forget it and quietly offer a person who has
+ * left the firm.
  */
-export async function listUsers(tx: TenantTransaction): Promise<User[]> {
-  return tx.select().from(users).orderBy(asc(users.fullName));
+export async function listUsers(
+  tx: TenantTransaction,
+  filters?: ListUsersFilters,
+): Promise<User[]> {
+  const where =
+    filters?.includeDisabled === false ? isNull(users.disabledAt) : undefined;
+
+  return tx.select().from(users).where(where).orderBy(asc(users.fullName));
 }
 
 /**

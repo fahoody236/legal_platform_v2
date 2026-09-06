@@ -165,3 +165,30 @@ export function useUpdateCase(caseId: string) {
     },
   });
 }
+
+/**
+ * Assigning, or clearing the assignment.
+ *
+ * `null` unassigns, and the API requires it explicitly rather than accepting an
+ * omitted field — so "remove the lawyer" and "I forgot to send one" cannot be
+ * the same request.
+ *
+ * Invalidating both keys is what makes the change appear without a reload: the
+ * detail screen re-reads this case, and the list re-reads its page, where the
+ * lawyer column would otherwise still name whoever was there before.
+ */
+export function useAssignCase(caseId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (assignedLawyerId: string | null) =>
+      apiFetch<{ case: CaseRow }>(
+        `/api/cases/${encodeURIComponent(caseId)}/assign`,
+        { method: "PATCH", body: JSON.stringify({ assignedLawyerId }) },
+      ).then((response) => response.case),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+      void queryClient.invalidateQueries({ queryKey: ["cases"] });
+    },
+  });
+}

@@ -9,6 +9,7 @@ import {
 } from "../lib/cases.js";
 import { formatDate, formatDateTime } from "../lib/dates.js";
 import { useHasPermission } from "../lib/session.js";
+import { CaseAssignment } from "./case-assignment.js";
 import { CaseForm, toCaseBody, type CaseFormValues } from "./case-form.js";
 
 /**
@@ -137,6 +138,7 @@ function toFormValues(record: CaseRow): CaseFormValues {
 function CaseDetail({ record }: { record: CaseRow }) {
   const status = STATUS_LABELS[record.status];
   const canEdit = useHasPermission("cases.edit");
+  const canAssign = useHasPermission("cases.assign");
   const [editing, setEditing] = useState(false);
   const update = useUpdateCase(record.id);
 
@@ -232,6 +234,13 @@ function CaseDetail({ record }: { record: CaseRow }) {
           {record.archivedAt ? `نعم — ${formatDate(record.archivedAt)}` : "لا"}
         </Field>
       </dl>
+
+      {/*
+        Its own control rather than a field in the list above, because it is the
+        one thing on this screen that changes the case — and because it belongs
+        to a permission the reader may not hold while holding cases.edit.
+      */}
+      {canAssign && <CaseAssignment record={record} />}
     </article>
   );
 }
