@@ -1,7 +1,11 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { ApiError } from "../lib/api.js";
-import { useClientOptions } from "../lib/clients.js";
 import { CASE_STATUSES, STATUS_LABELS, type CaseStatus } from "../lib/cases.js";
+import { useHasPermission } from "../lib/session.js";
+import {
+  ClientSearchField,
+  type SelectedClient,
+} from "./client-search-field.js";
 
 /**
  * The fields shared by opening a case and editing one.
@@ -30,6 +34,12 @@ import { CASE_STATUSES, STATUS_LABELS, type CaseStatus } from "../lib/cases.js";
 
 export interface CaseFormValues {
   clientId: string;
+  /**
+   * The chosen client's name, carried alongside the id so the field can show
+   * who is selected without looking them up again — and so it can show an
+   * archived client that search would never return.
+   */
+  clientNameAr: string;
   caseNumber: string;
   titleAr: string;
   title: string;
@@ -40,6 +50,7 @@ export interface CaseFormValues {
 
 export const EMPTY_CASE_FORM: CaseFormValues = {
   clientId: "",
+  clientNameAr: "",
   caseNumber: "",
   titleAr: "",
   title: "",
@@ -135,11 +146,7 @@ export function CaseForm({
 }) {
   const [values, setValues] = useState(initial);
   const [errors, setErrors] = useState<FieldErrors>({});
-
-  // Only fetched where there is a select to fill. In edit mode the client is
-  // not shown at all, so requesting the list would be a needless 403 for anyone
-  // who holds cases.edit without clients.view.
-  const clients = useClientOptions(mode === "create");
+  const canCreateClients = useHasPermission("clients.manage");
 
   const set = <K extends keyof CaseFormValues>(
     key: K,
@@ -219,32 +226,30 @@ export function CaseForm({
         </p>
       )}
 
+      {/*
+        The search field owns no selection of its own — it reports upward, and
+        the chosen client lives in this form's state. That is what lets the
+        quick-add modal open and close over the form without anything already
+        typed here being lost: the modal is a sibling, and nothing unmounts.
+      */}
       {mode === "create" && (
-        <Field id="case-clientId" label="العميل" error={shown.clientId}>
-          {clients.isError ? (
-            <p className="state denied">
-              لا تملك صلاحية عرض العملاء، وهي لازمة لاختيار عميل للقضية. راجع
-              مدير المكتب لمنحك صلاحية «عرض العملاء».
-            </p>
-          ) : (
-            <select
-              id="case-clientId"
-              value={values.clientId}
-              aria-describedby={describedBy("clientId")}
-              disabled={clients.isPending}
-              onChange={(event) => set("clientId", event.target.value)}
-            >
-              <option value="">
-                {clients.isPending ? "جارٍ التحميل…" : "— اختر العميل —"}
-              </option>
-              {(clients.data ?? []).map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.nameAr}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
+        <ClientSearchField
+          selected={
+            values.clientId
+              ? { id: values.clientId, nameAr: values.clientNameAr }
+              : null
+          }
+          onSelect={(client: SelectedClient | null) => {
+            setValues((current) => ({
+              ...current,
+              clientId: client?.id ?? "",
+              clientNameAr: client?.nameAr ?? "",
+            }));
+            setErrors((current) => ({ ...current, clientId: undefined }));
+          }}
+          error={shown.clientId}
+          canCreateClients={canCreateClients}
+        />
       )}
 
       {mode === "create" && (

@@ -502,3 +502,126 @@ textarea {
 .representative-form .form-actions {
   margin-block-start: 1rem;
 }
+
+/* ── Client search ────────────────────────────────────────────────────────── */
+
+.label-like {
+  display: block;
+  margin-block-end: 0.25rem;
+  font-size: 0.9rem;
+}
+
+/*
+ * The chosen client, in place of the search input. Showing the selection rather
+ * than a field still containing the search term means the form says who was
+ * picked, not what was typed to find them.
+ */
+.chosen {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding-block: 0.5rem;
+  padding-inline: 0.75rem;
+  border: 1px solid #c9c9c4;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.chosen strong {
+  flex: 1;
+}
+
+input[type="search"] {
+  inline-size: 100%;
+  box-sizing: border-box;
+  padding-block: 0.5rem;
+  padding-inline: 0.75rem;
+  font: inherit;
+  border: 1px solid #c9c9c4;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.search-results {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  /* Capped and scrollable: a long result list must not push the rest of the
+     form off the screen. */
+  max-block-size: 15rem;
+  overflow-y: auto;
+}
+
+.search-results:not(:empty) {
+  border: 1px solid #e4e4e0;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.search-results li + li {
+  border-block-start: 1px solid #f0f0ee;
+}
+
+.search-results button {
+  inline-size: 100%;
+  /* start, so the option text begins at the leading edge in either direction. */
+  text-align: start;
+  padding-block: 0.5rem;
+  padding-inline: 0.75rem;
+  background: none;
+  color: inherit;
+  border: 0;
+  border-radius: 0;
+  font: inherit;
+}
+
+.search-results button:hover,
+.search-results button:focus-visible {
+  background: #f0f4fd;
+}
+
+.result-name {
+  font-weight: 600;
+}
+
+.no-matches {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-block-start: 0.5rem;
+  padding-block: 0.75rem;
+  padding-inline: 0.75rem;
+  border-inline-start: 3px solid #c9c9c4;
+  background: #f5f5f3;
+}
+
+.no-matches p {
+  margin: 0;
+  flex: 1;
+}
+
+/* ── Modal ────────────────────────────────────────────────────────────────── */
+
+/*
+ * A native <dialog>. The margin rules centre it; `dialog` defaults to auto
+ * margins that a stylesheet has to restate once any are set.
+ */
+.modal {
+  inline-size: min(26rem, calc(100vw - 2rem));
+  padding-block: 1.5rem;
+  padding-inline: 1.5rem;
+  border: 1px solid #d8d8d2;
+  border-radius: 6px;
+  background: #fbfbfa;
+  color: inherit;
+}
+
+.modal::backdrop {
+  background: rgb(0 0 0 / 35%);
+}
+
+.modal h2 {
+  margin-block: 0 1.25rem;
+  font-size: 1.2rem;
+}

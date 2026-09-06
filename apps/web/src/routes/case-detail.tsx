@@ -124,6 +124,7 @@ function CaseBody({
 function toFormValues(record: CaseRow): CaseFormValues {
   return {
     clientId: record.clientId,
+    clientNameAr: record.clientNameAr,
     caseNumber: record.caseNumber,
     titleAr: record.titleAr,
     title: record.title ?? "",

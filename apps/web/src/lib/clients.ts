@@ -5,6 +5,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import { apiFetch } from "./api.js";
+import { normaliseArabic } from "./arabic.js";
 
 /** Mirrors CLIENT_TYPES in packages/db. The API rejects anything else. */
 export const CLIENT_TYPES = ["individual", "company"] as const;
@@ -124,42 +125,101 @@ export function useClient(
 export interface ClientOption {
   id: string;
   nameAr: string;
+  clientType: ClientType;
+  identifier: string | null;
 }
 
 /**
- * The firm's clients, for choosing one when opening a case.
+ * How many rows the search reads.
  *
- * Needs `clients.view`, which `cases.create` does not imply — a firm can
- * legitimately grant one without the other, and the caller then gets a 403 here
- * while the rest of the form works. The form says so rather than showing an
- * empty select, because an empty select is indistinguishable from a firm with
- * no clients yet.
- *
- * Archived clients are filtered out. Opening a new matter for a client the firm
- * has stopped acting for is almost always a mistake, and the ones that are not
- * can be un-archived first — a decision worth making deliberately rather than
- * by picking a name out of a list.
- *
- * One page of 100. That is a real ceiling and this select is the wrong control
- * for a firm past it; a search-backed picker is the answer, and it waits on the
- * Arabic search work.
+ * A ceiling, and a real one: past this the search stops seeing part of the
+ * firm's client list and silently reports no match for a client that exists.
+ * It is the direct consequence of the interim below, and it disappears with it.
  */
-export function useClientOptions(
-  enabled: boolean,
-): UseQueryResult<ClientOption[]> {
-  return useQuery({
-    queryKey: ["clients", "options"],
-    queryFn: async () => {
-      const body = await apiFetch<ClientsPage>(
-        "/api/clients?archived=false&limit=100",
+const SEARCH_PAGE = 100;
+
+/**
+ * The minimum before searching. One character matches most of a client list,
+ * which is a slower way of showing everything.
+ */
+export const MIN_SEARCH_LENGTH = 2;
+
+/**
+ * Clients matching what the person typed.
+ *
+ * ── The interim, and exactly what changes ────────────────────────────────────
+ *
+ * The clients API has no search parameter yet, so `buildSearchUrl` currently
+ * ignores the term and this filters the first page in the browser. Two things
+ * follow, and both are the reason the parameter is worth adding rather than
+ * living with this:
+ *
+ *   * A firm with more than SEARCH_PAGE clients gets wrong answers — not slow
+ *     ones, wrong ones. A client past the first page reads as "no match", and
+ *     the offer to create a new one appears for a client that already exists,
+ *     which is how the same client ends up in the list twice.
+ *   * Matching is done on strings already in the browser, so the Arabic folding
+ *     in arabic.ts has to happen here. That folding must eventually match what
+ *     the index does, and two implementations of it will not stay in step.
+ *
+ * When the parameter lands, `buildSearchUrl` gains `&q=` and `matches` is
+ * deleted. Nothing else in this file or the components above it changes: the
+ * term is already in the query key, so each debounced term is already its own
+ * request.
+ */
+function buildSearchUrl(term: string): string {
+  // The term is deliberately unused for now. See the note above.
+  void term;
+  return `/api/clients?archived=false&limit=${SEARCH_PAGE}`;
+}
+
+function matches(clients: Client[], term: string): ClientOption[] {
+  const needle = normaliseArabic(term);
+
+  return clients
+    .filter((client) => {
+      const identifier = clientIdentifier(client) ?? "";
+
+      return (
+        normaliseArabic(client.nameAr).includes(needle) ||
+        normaliseArabic(client.name ?? "").includes(needle) ||
+        identifier.includes(needle)
       );
-      return body.clients.map((client) => ({
-        id: client.id,
-        nameAr: client.nameAr,
-      }));
+    })
+    .map((client) => ({
+      id: client.id,
+      nameAr: client.nameAr,
+      clientType: client.clientType,
+      identifier: clientIdentifier(client),
+    }));
+}
+
+/**
+ * `archived=false` is not a default anyone should change here. A new case must
+ * not be opened against a client the firm has stopped acting for, and the way
+ * to do it anyway is to un-archive the client first — a deliberate act, rather
+ * than picking a name out of a list that does not say it is closed.
+ *
+ * A case that already references an archived client still shows it: the name
+ * comes from the case record, resolved by the API's join, which has no archived
+ * filter. Search decides what can be chosen, not what can be displayed.
+ */
+export function useClientSearch(term: string): UseQueryResult<ClientOption[]> {
+  const trimmed = term.trim();
+
+  return useQuery({
+    queryKey: ["clients", "search", trimmed],
+    queryFn: async () => {
+      const body = await apiFetch<ClientsPage>(buildSearchUrl(trimmed));
+      return matches(body.clients, trimmed);
     },
-    enabled,
+    enabled: trimmed.length >= MIN_SEARCH_LENGTH,
     retry: retryUnlessAnswered,
+    // The same page answers every term today, so re-reading it per keystroke
+    // would be pure waste. Once the term is sent this becomes an ordinary
+    // per-query cache.
+    staleTime: 30_000,
+    placeholderData: (previous) => previous,
   });
 }
 
