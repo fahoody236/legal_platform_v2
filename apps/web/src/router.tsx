@@ -7,6 +7,12 @@ import {
 } from "@tanstack/react-router";
 import { apiFetch, ApiError } from "./lib/api.js";
 import { CASE_STATUSES, type CaseStatus } from "./lib/cases.js";
+import {
+  TASK_PRIORITIES,
+  TASK_STATUSES,
+  type TaskPriority,
+  type TaskStatus,
+} from "./lib/tasks.js";
 import { CLIENT_TYPES, type ClientType } from "./lib/clients.js";
 import type { SessionUser } from "./lib/session.js";
 import { CaseDetailPage } from "./routes/case-detail.js";
@@ -14,6 +20,7 @@ import { CaseNewPage } from "./routes/case-new.js";
 import { ClientDetailPage } from "./routes/client-detail.js";
 import { ClientNewPage } from "./routes/client-new.js";
 import { ClientsPage } from "./routes/clients.js";
+import { TasksPage } from "./routes/tasks.js";
 import { CasesPage } from "./routes/cases.js";
 import { LoginPage } from "./routes/login.js";
 import { RouteError } from "./routes/route-error.js";
@@ -196,6 +203,58 @@ const clientDetailRoute = createRoute({
   errorComponent: RouteError,
 });
 
+/**
+ * The tasks list's filters, in the URL like every other list's.
+ *
+ * `mine` is a boolean rather than a user id on purpose: a link to "my tasks"
+ * should show the *reader* their own work, not the sender's. The id is resolved
+ * from the session at request time.
+ */
+interface TasksSearch {
+  status?: TaskStatus | undefined;
+  priority?: TaskPriority | undefined;
+  overdue?: boolean | undefined;
+  mine?: boolean | undefined;
+  offset?: number | undefined;
+}
+
+function readBoolean(value: unknown): boolean | undefined {
+  if (value === true || value === "true") return true;
+  if (value === false || value === "false") return false;
+  return undefined;
+}
+
+function validateTasksSearch(search: Record<string, unknown>): TasksSearch {
+  const status = TASK_STATUSES.includes(search["status"] as TaskStatus)
+    ? (search["status"] as TaskStatus)
+    : undefined;
+
+  const priority = TASK_PRIORITIES.includes(search["priority"] as TaskPriority)
+    ? (search["priority"] as TaskPriority)
+    : undefined;
+
+  const rawOffset = Number(search["offset"]);
+  const offset =
+    Number.isInteger(rawOffset) && rawOffset > 0 ? rawOffset : undefined;
+
+  return {
+    status,
+    priority,
+    overdue: readBoolean(search["overdue"]),
+    mine: readBoolean(search["mine"]),
+    offset,
+  };
+}
+
+const tasksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/tasks",
+  validateSearch: validateTasksSearch,
+  beforeLoad: requireSession,
+  component: TasksPage,
+  errorComponent: RouteError,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -205,6 +264,7 @@ const routeTree = rootRoute.addChildren([
   clientsRoute,
   clientNewRoute,
   clientDetailRoute,
+  tasksRoute,
 ]);
 
 export const router = createRouter({ routeTree });

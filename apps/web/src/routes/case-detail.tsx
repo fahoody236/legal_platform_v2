@@ -10,6 +10,7 @@ import {
 import { formatDate, formatDateTime } from "../lib/dates.js";
 import { useHasPermission } from "../lib/session.js";
 import { CaseAssignment } from "./case-assignment.js";
+import { CaseTasks } from "./case-tasks.js";
 import { CaseForm, toCaseBody, type CaseFormValues } from "./case-form.js";
 
 /**
@@ -241,6 +242,8 @@ function CaseDetail({ record }: { record: CaseRow }) {
         to a permission the reader may not hold while holding cases.edit.
       */}
       {canAssign && <CaseAssignment record={record} />}
+
+      <CaseTasks caseId={record.id} />
     </article>
   );
 }

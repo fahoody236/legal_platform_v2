@@ -8,3 +8,4 @@ export * from "./audit_log.js";
 export * from "./clients.js";
 export * from "./client_representatives.js";
 export * from "./cases.js";
+export * from "./tasks.js";

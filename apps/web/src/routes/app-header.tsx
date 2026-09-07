@@ -49,6 +49,9 @@ export function AppHeader({
         <Link to="/clients" search={{}} activeProps={{ className: "current" }}>
           العملاء
         </Link>
+        <Link to="/tasks" search={{}} activeProps={{ className: "current" }}>
+          المهام
+        </Link>
 
         {session.data && (
           <span className="identity">

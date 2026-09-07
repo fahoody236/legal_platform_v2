@@ -25,7 +25,11 @@ export type AuditAction =
   | "clients.archived"
   | "clients.representative.added"
   | "clients.representative.updated"
-  | "clients.representative.archived";
+  | "clients.representative.archived"
+  | "tasks.created"
+  | "tasks.updated"
+  | "tasks.assigned"
+  | "tasks.completed";
 
 export interface AuditEvent {
   action: AuditAction;

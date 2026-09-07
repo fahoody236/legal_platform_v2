@@ -21,7 +21,7 @@ export const permissions = pgTable("permissions", {
 export type Permission = typeof permissions.$inferSelect;
 
 /**
- * The keys seeded by migrations 0008 and 0010, as a type. Mirrors the migrations
+ * The keys seeded by migrations 0008, 0010 and 0012, as a type. Mirrors the migrations
  * rather
  * than generating it — the database is the source of truth, and the foreign key
  * from `role_permissions` is what actually enforces that a grant names a real
@@ -43,6 +43,11 @@ export const PERMISSION_KEYS = [
   "cases.create",
   "cases.edit",
   "cases.assign",
+  // 0012 — tasks.
+  "tasks.view",
+  "tasks.create",
+  "tasks.edit",
+  "tasks.assign",
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];

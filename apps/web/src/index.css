@@ -639,3 +639,125 @@ input[type="search"] {
   inline-size: 100%;
   box-sizing: border-box;
 }
+
+/* ── Tasks ────────────────────────────────────────────────────────────────── */
+
+.tasks-section {
+  margin-block-start: 2.5rem;
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid #e4e4e0;
+}
+
+.tasks-section h2 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.task-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+.task-list > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem;
+  padding-block: 0.8rem;
+  border-block-end: 1px solid #e4e4e0;
+}
+
+/* A finished task recedes: still readable, plainly not outstanding work. */
+.task-list > li.done .task-title strong {
+  color: #77776f;
+  text-decoration: line-through;
+}
+
+.task-main {
+  flex: 1;
+  min-inline-size: 16rem;
+}
+
+.task-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.task-description {
+  margin-block: 0.35rem 0;
+  font-size: 0.9rem;
+  color: #55554e;
+}
+
+.task-meta {
+  margin-block: 0.35rem 0;
+  font-size: 0.85rem;
+  color: #55554e;
+}
+
+.task-meta a {
+  color: #1f3d8f;
+}
+
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.task-actions button {
+  padding-block: 0.3rem;
+  padding-inline: 0.7rem;
+  font-size: 0.9rem;
+}
+
+.task-actions select {
+  font-size: 0.9rem;
+}
+
+.task-form,
+.task-form-row {
+  inline-size: 100%;
+}
+
+.task-form {
+  margin-block: 1rem;
+  padding-block: 1rem;
+  padding-inline: 1rem;
+  border: 1px solid #e4e4e0;
+  border-radius: 4px;
+  background: #fff;
+}
+
+/* Three short fields side by side, stacking when there is no room. */
+.task-form-row-inline {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.task-form-row-inline .field {
+  flex: 1;
+  min-inline-size: 10rem;
+}
+
+/*
+ * A checkbox and its label on one line. `width: auto` undoes the full-width
+ * rule that every other input in this stylesheet wants.
+ */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-block-end: 0;
+  font-size: 0.9rem;
+}
+
+.toggle input[type="checkbox"] {
+  inline-size: auto;
+  margin: 0;
+}
