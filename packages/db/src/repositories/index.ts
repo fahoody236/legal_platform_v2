@@ -11,3 +11,4 @@ export * from "./cases.js";
 export * from "./clients.js";
 export * from "./roles.js";
 export * from "./tasks.js";
+export * from "./search.js";

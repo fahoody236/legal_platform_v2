@@ -3,6 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { apiFetch } from "../lib/api.js";
 import { displayName, useSession } from "../lib/session.js";
+import { GlobalSearch } from "./global-search.js";
 
 /**
  * The heading shared by the list screens, carrying the navigation between them.
@@ -52,6 +53,8 @@ export function AppHeader({
         <Link to="/tasks" search={{}} activeProps={{ className: "current" }}>
           المهام
         </Link>
+
+        <GlobalSearch />
 
         {session.data && (
           <span className="identity">

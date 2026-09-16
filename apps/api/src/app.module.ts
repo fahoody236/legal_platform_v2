@@ -6,6 +6,7 @@ import { ClientsModule } from "./clients/clients.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { HealthController } from "./health.controller.js";
 import { PermissionsModule } from "./permissions/permissions.module.js";
+import { SearchModule } from "./search/search.module.js";
 import { TasksModule } from "./tasks/tasks.module.js";
 import { TenantModule } from "./tenant/tenant.module.js";
 import { UsersModule } from "./users/users.module.js";
@@ -27,6 +28,7 @@ import { UsersModule } from "./users/users.module.js";
     ClientsModule,
     UsersModule,
     TasksModule,
+    SearchModule,
   ],
   controllers: [HealthController],
 })

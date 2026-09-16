@@ -761,3 +761,87 @@ input[type="search"] {
   inline-size: auto;
   margin: 0;
 }
+
+/* ── Global search ────────────────────────────────────────────────────────── */
+
+.global-search {
+  position: relative;
+  flex: 1;
+  max-inline-size: 26rem;
+  /* Sits between the section links and the identity, taking the slack. */
+  margin-inline-start: 1rem;
+}
+
+.global-search input[type="search"] {
+  padding-block: 0.35rem;
+  font-size: 0.9rem;
+}
+
+/*
+ * Anchored to the field's leading edge with a logical property, so it opens
+ * under the field's right edge in Arabic and would open under its left edge
+ * unchanged in English.
+ */
+.search-popover {
+  position: absolute;
+  inset-block-start: calc(100% + 0.25rem);
+  inset-inline-start: 0;
+  inline-size: min(34rem, calc(100vw - 2rem));
+  z-index: 10;
+  padding-block: 0.5rem;
+  padding-inline: 0.5rem;
+  border: 1px solid #d8d8d2;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  max-block-size: 70vh;
+  overflow-y: auto;
+}
+
+.search-popover .hint,
+.search-popover .field-error {
+  margin: 0;
+  padding-block: 0.5rem;
+  padding-inline: 0.5rem;
+}
+
+.search-groups {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.search-group-label {
+  padding-block: 0.6rem 0.25rem;
+  padding-inline: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #55554e;
+  text-transform: none;
+}
+
+.search-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding-block: 0.45rem;
+  padding-inline: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* The keyboard highlight and the hover highlight are the same thing. */
+.search-row.active {
+  background: #f0f4fd;
+}
+
+.search-primary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.search-secondary {
+  font-size: 0.85rem;
+}
