@@ -14,7 +14,16 @@
  * lacks a permission, and everything else is the same unexpected failure.
  */
 export class ApiError extends Error {
-  constructor(readonly status: number) {
+  constructor(
+    readonly status: number,
+    /**
+     * A machine-readable reason, when the API sends one. Almost no route does:
+     * the status alone is enough to tell a 404 from a 409. The exception is a
+     * 409 that has two causes on the same route — a duplicate name and the
+     * last-administrator rule — which the interface has to word differently.
+     */
+    readonly code?: string,
+  ) {
     super(`API request failed with status ${status}`);
     this.name = "ApiError";
   }
@@ -36,10 +45,28 @@ export async function apiFetch<T>(
   });
 
   if (!response.ok) {
-    throw new ApiError(response.status);
+    throw new ApiError(response.status, await errorCode(response));
   }
 
   return (await response.json()) as T;
+}
+
+/**
+ * Reads `{ code }` out of an error body, if there is one. Bodies are optional
+ * and usually absent; anything unparseable is treated as absent rather than as
+ * a second failure.
+ */
+async function errorCode(response: Response): Promise<string | undefined> {
+  try {
+    const body: unknown = await response.json();
+    if (typeof body === "object" && body !== null && "code" in body) {
+      const code = (body as { code: unknown }).code;
+      return typeof code === "string" ? code : undefined;
+    }
+  } catch {
+    // No body, or not JSON.
+  }
+  return undefined;
 }
 
 export function isApiError(error: unknown, status: number): boolean {

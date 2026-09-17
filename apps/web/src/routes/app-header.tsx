@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { apiFetch } from "../lib/api.js";
-import { displayName, useSession } from "../lib/session.js";
+import { displayName, useHasPermission, useSession } from "../lib/session.js";
 import { GlobalSearch } from "./global-search.js";
 
 /**
@@ -28,6 +28,10 @@ export function AppHeader({
   const session = useSession();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  // The one link that is hidden rather than shown-and-explained: settings is
+  // administration, and a section that most of a firm cannot enter is noise in
+  // their navigation rather than a place they should know exists.
+  const canSeeSettings = useHasPermission("roles.view");
 
   async function signOut() {
     try {
@@ -56,6 +60,11 @@ export function AppHeader({
         <Link to="/tasks" search={{}} activeProps={{ className: "current" }}>
           المهام
         </Link>
+        {canSeeSettings && (
+          <Link to="/settings/roles" activeProps={{ className: "current" }}>
+            الإعدادات
+          </Link>
+        )}
 
         <GlobalSearch />
 

@@ -29,7 +29,11 @@ export type AuditAction =
   | "tasks.created"
   | "tasks.updated"
   | "tasks.assigned"
-  | "tasks.completed";
+  | "tasks.completed"
+  | "roles.created"
+  | "roles.updated"
+  | "roles.archived"
+  | "users.roles_changed";
 
 export interface AuditEvent {
   action: AuditAction;

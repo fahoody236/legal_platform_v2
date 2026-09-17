@@ -30,11 +30,16 @@ export function userDisplayName(user: DirectoryUser): string {
  * grant either alone — so a 403 is an expected answer here rather than a fault,
  * and the control that calls this handles it as one.
  */
-export function useDirectory(enabled: boolean): UseQueryResult<DirectoryUser[]> {
+export function useDirectory(
+  enabled: boolean,
+  includeDisabled = false,
+): UseQueryResult<DirectoryUser[]> {
   return useQuery({
-    queryKey: ["users", "directory"],
+    queryKey: ["users", "directory", includeDisabled],
     queryFn: async () => {
-      const body = await apiFetch<{ users: DirectoryUser[] }>("/api/users");
+      const body = await apiFetch<{ users: DirectoryUser[] }>(
+        includeDisabled ? "/api/users?includeDisabled=true" : "/api/users",
+      );
       return body.users;
     },
     enabled,

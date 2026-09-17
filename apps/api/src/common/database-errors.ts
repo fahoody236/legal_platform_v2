@@ -8,6 +8,8 @@
 export const PG_UNIQUE_VIOLATION = "23505";
 export const PG_FOREIGN_KEY_VIOLATION = "23503";
 export const PG_CHECK_VIOLATION = "23514";
+/** Our own code, raised by the last-administrator triggers in migration 0015. */
+export const PG_LAST_ADMINISTRATOR = "LA001";
 
 /**
  * Digs the SQLSTATE code out of whatever the driver threw.

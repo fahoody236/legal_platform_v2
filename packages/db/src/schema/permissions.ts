@@ -1,4 +1,17 @@
-import { pgTable, text } from "drizzle-orm/pg-core";
+import { integer, pgTable, text } from "drizzle-orm/pg-core";
+
+/**
+ * The things permissions are about, with the Arabic a role editor shows as a
+ * group heading. One row per resource, so the label cannot disagree with itself
+ * across the permissions that share it (migration 0014).
+ */
+export const permissionResources = pgTable("permission_resources", {
+  resource: text("resource").primaryKey(),
+  labelAr: text("label_ar").notNull(),
+  sortOrder: integer("sort_order").notNull(),
+});
+
+export type PermissionResource = typeof permissionResources.$inferSelect;
 
 /**
  * The global permission catalogue — the platform's vocabulary, identical for
@@ -12,10 +25,14 @@ import { pgTable, text } from "drizzle-orm/pg-core";
 export const permissions = pgTable("permissions", {
   /** `resource.action`, e.g. `documents.download`. Stable; code refers to it. */
   key: text("key").primaryKey(),
-  resource: text("resource").notNull(),
+  resource: text("resource")
+    .notNull()
+    .references(() => permissionResources.resource),
   action: text("action").notNull(),
-  /** Engineering-facing. Arabic interface labels are not designed yet. */
+  /** Engineering-facing. The Arabic a person reads is `labelAr`. */
   description: text("description").notNull(),
+  /** What the role editor shows next to the checkbox (migration 0014). */
+  labelAr: text("label_ar").notNull(),
 });
 
 export type Permission = typeof permissions.$inferSelect;

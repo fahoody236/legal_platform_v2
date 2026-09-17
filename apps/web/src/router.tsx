@@ -25,6 +25,8 @@ import { TasksPage } from "./routes/tasks.js";
 import { CasesPage } from "./routes/cases.js";
 import { LoginPage } from "./routes/login.js";
 import { RouteError } from "./routes/route-error.js";
+import { SettingsRolesPage } from "./routes/settings-roles.js";
+import { SettingsUsersPage } from "./routes/settings-users.js";
 
 /**
  * Code-based routes rather than file-based.
@@ -264,6 +266,22 @@ const dashboardRoute = createRoute({
   errorComponent: RouteError,
 });
 
+const settingsRolesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/settings/roles",
+  beforeLoad: requireSession,
+  component: SettingsRolesPage,
+  errorComponent: RouteError,
+});
+
+const settingsUsersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/settings/users",
+  beforeLoad: requireSession,
+  component: SettingsUsersPage,
+  errorComponent: RouteError,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -275,6 +293,8 @@ const routeTree = rootRoute.addChildren([
   clientNewRoute,
   clientDetailRoute,
   tasksRoute,
+  settingsRolesRoute,
+  settingsUsersRoute,
 ]);
 
 export const router = createRouter({ routeTree });

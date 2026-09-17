@@ -4,6 +4,7 @@ import type { AuthenticatedRequest } from "../auth/authenticated-request.js";
 import { requireFirmId } from "../tenant/tenant-request.js";
 import {
   PG_FOREIGN_KEY_VIOLATION,
+  PG_LAST_ADMINISTRATOR,
   PG_UNIQUE_VIOLATION,
   postgresErrorCode,
 } from "./database-errors.js";
@@ -48,6 +49,13 @@ export function actorOf(request: AuthenticatedRequest): Actor {
  * this firm. Unlike the references above, this tells the caller nothing they
  * could not learn by listing their own records.
  *
+ * **Last administrator → 409 with `{ code: "last_administrator" }`.** The
+ * trigger in migration 0015 refused the commit because the firm would have had
+ * nobody holding `roles.manage`. Same status as a duplicate — the request
+ * conflicts with the current state — but the interface has to say something
+ * different, so this one carries a body. It is the only mapped error that does:
+ * the others are attributable from status alone.
+ *
  * Anything else is returned unchanged and surfaces as a 500. A constraint
  * nobody anticipated should be fixed, not flattened into a 400 that blames the
  * caller.
@@ -61,6 +69,10 @@ export function translateWriteError(error: unknown): unknown {
 
   if (code === PG_UNIQUE_VIOLATION) {
     return new ConflictException();
+  }
+
+  if (code === PG_LAST_ADMINISTRATOR) {
+    return new ConflictException({ code: "last_administrator" });
   }
 
   return error;

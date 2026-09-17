@@ -967,3 +967,125 @@ input[type="search"] {
     grid-column: 1 / -1;
   }
 }
+
+/* ── Settings ─────────────────────────────────────────────────────────────── */
+
+.settings-nav {
+  display: flex;
+  gap: 1rem;
+  margin-block-end: 1.25rem;
+  font-size: 0.95rem;
+}
+
+.settings-nav a {
+  color: #1f3d8f;
+  text-decoration: none;
+  padding-block-end: 0.25rem;
+  border-block-end: 2px solid transparent;
+}
+
+.settings-nav a.current {
+  color: #1a1a18;
+  font-weight: 600;
+  border-block-end-color: #1f3d8f;
+}
+
+.role-list > li,
+.user-list > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem;
+  padding-block: 0.9rem;
+}
+
+.role-main {
+  flex: 1;
+  min-inline-size: 18rem;
+}
+
+.role-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.role-permissions {
+  margin-block: 0.35rem 0;
+  font-size: 0.85rem;
+}
+
+.role-hint {
+  inline-size: 100%;
+}
+
+.role-form-row,
+.role-editor {
+  inline-size: 100%;
+}
+
+.role-editor h3 {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+}
+
+.permission-groups {
+  border: 0;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.permission-groups legend {
+  font-size: 0.9rem;
+  margin-block-end: 0.5rem;
+  padding: 0;
+}
+
+/* Resources side by side where there is room, each a column of checkboxes. */
+.permission-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 1rem 1.5rem;
+}
+
+.permission-groups legend {
+  grid-column: 1 / -1;
+}
+
+.permission-group h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+  color: #55554e;
+}
+
+.permission-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin-block-end: 0.3rem;
+  font-size: 0.92rem;
+}
+
+.permission-toggle input[type="checkbox"] {
+  margin-block-start: 0.3rem;
+}
+
+.permission-toggle .hint {
+  display: block;
+  margin: 0;
+}
+
+.role-checklist {
+  margin-block-start: 0.5rem;
+}
+
+.archived-roles {
+  margin-block-start: 1.5rem;
+  color: #55554e;
+}
+
+.archived-roles summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+}
