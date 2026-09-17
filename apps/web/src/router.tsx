@@ -15,6 +15,7 @@ import {
 } from "./lib/tasks.js";
 import { CLIENT_TYPES, type ClientType } from "./lib/clients.js";
 import type { SessionUser } from "./lib/session.js";
+import { AppShell } from "./routes/app-shell.js";
 import { CaseDetailPage } from "./routes/case-detail.js";
 import { CaseNewPage } from "./routes/case-new.js";
 import { ClientDetailPage } from "./routes/client-detail.js";
@@ -96,6 +97,28 @@ async function requireSession(): Promise<void> {
   }
 }
 
+/**
+ * The signed-in half of the application, as one pathless layout route.
+ *
+ * It owns the session check and the shell — sidebar, top bar, page — and every
+ * screen below it renders inside that shell through its Outlet. Putting the
+ * check here rather than on each child means a screen cannot be added without
+ * it, and putting the shell here means it cannot be added without navigation
+ * either, which the header-based navigation before this allowed: the detail
+ * screens simply had none.
+ *
+ * A failure in `beforeLoad` here — the session request itself failing — renders
+ * RouteError in place of the whole shell, since without a session there is
+ * nothing to put in the sidebar. A child's own failure renders inside it.
+ */
+const appRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: "app",
+  beforeLoad: requireSession,
+  component: AppShell,
+  errorComponent: RouteError,
+});
+
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
@@ -111,10 +134,9 @@ const loginRoute = createRoute({
 });
 
 const casesRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appRoute,
   path: "/cases",
   validateSearch: validateCasesSearch,
-  beforeLoad: requireSession,
   component: CasesPage,
   errorComponent: RouteError,
 });
@@ -126,19 +148,17 @@ const casesRoute = createRoute({
  * against is a 404 for a route that exists, which is worth being explicit about.
  */
 const caseNewRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appRoute,
   path: "/cases/new",
   validateSearch: validateCasesSearch,
-  beforeLoad: requireSession,
   component: CaseNewPage,
   errorComponent: RouteError,
 });
 
 const caseDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appRoute,
   path: "/cases/$caseId",
   validateSearch: validateCasesSearch,
-  beforeLoad: requireSession,
   component: CaseDetailPage,
   errorComponent: RouteError,
 });
@@ -179,29 +199,26 @@ function validateClientsSearch(
 }
 
 const clientsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appRoute,
   path: "/clients",
   validateSearch: validateClientsSearch,
-  beforeLoad: requireSession,
   component: ClientsPage,
   errorComponent: RouteError,
 });
 
 /** Before the dynamic route, so "new" is a literal segment and not a client id. */
 const clientNewRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appRoute,
   path: "/clients/new",
   validateSearch: validateClientsSearch,
-  beforeLoad: requireSession,
   component: ClientNewPage,
   errorComponent: RouteError,
 });
 
 const clientDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appRoute,
   path: "/clients/$clientId",
   validateSearch: validateClientsSearch,
-  beforeLoad: requireSession,
   component: ClientDetailPage,
   errorComponent: RouteError,
 });
@@ -250,34 +267,30 @@ function validateTasksSearch(search: Record<string, unknown>): TasksSearch {
 }
 
 const tasksRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appRoute,
   path: "/tasks",
   validateSearch: validateTasksSearch,
-  beforeLoad: requireSession,
   component: TasksPage,
   errorComponent: RouteError,
 });
 
 const dashboardRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appRoute,
   path: "/dashboard",
-  beforeLoad: requireSession,
   component: DashboardPage,
   errorComponent: RouteError,
 });
 
 const settingsRolesRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appRoute,
   path: "/settings/roles",
-  beforeLoad: requireSession,
   component: SettingsRolesPage,
   errorComponent: RouteError,
 });
 
 const settingsUsersRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appRoute,
   path: "/settings/users",
-  beforeLoad: requireSession,
   component: SettingsUsersPage,
   errorComponent: RouteError,
 });
@@ -285,16 +298,18 @@ const settingsUsersRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
-  dashboardRoute,
-  casesRoute,
-  caseNewRoute,
-  caseDetailRoute,
-  clientsRoute,
-  clientNewRoute,
-  clientDetailRoute,
-  tasksRoute,
-  settingsRolesRoute,
-  settingsUsersRoute,
+  appRoute.addChildren([
+    dashboardRoute,
+    casesRoute,
+    caseNewRoute,
+    caseDetailRoute,
+    clientsRoute,
+    clientNewRoute,
+    clientDetailRoute,
+    tasksRoute,
+    settingsRolesRoute,
+    settingsUsersRoute,
+  ]),
 ]);
 
 export const router = createRouter({ routeTree });

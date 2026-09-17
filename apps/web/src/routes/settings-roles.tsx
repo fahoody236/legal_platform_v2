@@ -144,7 +144,7 @@ function RolesBody({
       )}
 
       {active.length === 0 && !creating && (
-        <p className="state">لا توجد أدوار بعد.</p>
+        <p className="state empty">لا توجد أدوار بعد.</p>
       )}
 
       <ul className="plain-list role-list">

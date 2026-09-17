@@ -60,7 +60,7 @@ export function CaseTasks({ caseId }: { caseId: string }) {
       )}
 
       {tasks.isSuccess && tasks.data.tasks.length === 0 && !adding && (
-        <p className="state">لا توجد مهام على هذه القضية.</p>
+        <p className="state empty">لا توجد مهام على هذه القضية.</p>
       )}
 
       <ul className="task-list">

@@ -39,7 +39,7 @@ export interface TasksSearch {
  * user id would show the sender's work to whoever opened it.
  */
 export function TasksPage() {
-  const search = useSearch({ from: "/tasks" });
+  const search = useSearch({ from: "/app/tasks" });
   const navigate = useNavigate();
   const session = useSession();
 
@@ -225,7 +225,7 @@ function TasksBody({
   }
 
   if (tasks.length === 0) {
-    return <p className="state">لا توجد مهام مطابقة.</p>;
+    return <p className="state empty">لا توجد مهام مطابقة.</p>;
   }
 
   return (

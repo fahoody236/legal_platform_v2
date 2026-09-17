@@ -20,18 +20,25 @@ export function RouteError({ error }: { error: Error }) {
   const router = useRouter();
 
   return (
+    // Rendered both in place of the shell (the session check itself failed)
+    // and inside it (one screen failed), so it is a card either way rather
+    // than a full-page layout of its own.
     <main className="narrow">
-      <h1>تعذّر تحميل الصفحة</h1>
+      <div className="card">
+        <h1>تعذّر تحميل الصفحة</h1>
 
-      <p className="state error" role="alert">
-        {isNetworkError(error)
-          ? "تعذّر الاتصال بالخادم. تحقّق من الاتصال ثم حاول مرة أخرى."
-          : "حدث خطأ غير متوقع. حاول مرة أخرى."}
-      </p>
+        <p className="state error" role="alert">
+          {isNetworkError(error)
+            ? "تعذّر الاتصال بالخادم. تحقّق من الاتصال ثم حاول مرة أخرى."
+            : "حدث خطأ غير متوقع. حاول مرة أخرى."}
+        </p>
 
-      <button type="button" onClick={() => void router.invalidate()}>
-        إعادة المحاولة
-      </button>
+        <div className="form-actions">
+          <button type="button" onClick={() => void router.invalidate()}>
+            إعادة المحاولة
+          </button>
+        </div>
+      </div>
     </main>
   );
 }

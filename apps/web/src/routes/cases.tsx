@@ -40,7 +40,7 @@ function StatusBadge({ status }: { status: CaseStatus }) {
 export function CasesPage() {
   // Addressed by path rather than by importing the route object, which would
   // make this module and the router import each other.
-  const search = useSearch({ from: "/cases" });
+  const search = useSearch({ from: "/app/cases" });
   const navigate = useNavigate();
   const canCreate = useHasPermission("cases.create");
 
@@ -188,7 +188,7 @@ function CasesBody({
   }
 
   if (rows.length === 0) {
-    return <p className="state">لا توجد قضايا مطابقة.</p>;
+    return <p className="state empty">لا توجد قضايا مطابقة.</p>;
   }
 
   return (

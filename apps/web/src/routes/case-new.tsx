@@ -9,7 +9,7 @@ import {
 } from "./case-form.js";
 
 export function CaseNewPage() {
-  const search = useSearch({ from: "/cases/new" });
+  const search = useSearch({ from: "/app/cases/new" });
   const navigate = useNavigate();
   const create = useCreateCase();
   const canCreate = useHasPermission("cases.create");
@@ -37,7 +37,7 @@ export function CaseNewPage() {
   return (
     <main className="narrow">
       <p className="back">
-        <Link {...backTo}>← العودة إلى قائمة القضايا</Link>
+        <Link {...backTo}>→ العودة إلى قائمة القضايا</Link>
       </p>
 
       <h1>قضية جديدة</h1>

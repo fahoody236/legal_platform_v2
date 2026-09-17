@@ -1,22 +1,13 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { apiFetch } from "../lib/api.js";
-import { displayName, useHasPermission, useSession } from "../lib/session.js";
-import { GlobalSearch } from "./global-search.js";
 
 /**
- * The heading shared by the list screens, carrying the navigation between them.
+ * The heading of a screen: its title and, beside it, the actions that belong
+ * to the whole screen rather than to one row.
  *
- * Both links are always shown, including the one to the section the reader is
- * already in — a navigation that hides the current item makes the set of places
- * change as you move through it, so nobody can learn its shape. `activeProps`
- * marks the current one instead.
- *
- * The links are not hidden for want of `cases.view` or `clients.view` either.
- * A person who cannot read clients still benefits from knowing the section
- * exists and being told why they cannot open it — which the screen does — far
- * more than from a navigation that quietly differs from their colleague's.
+ * Navigation used to live here too, which meant a screen that did not render
+ * this header had no navigation — and the detail screens did not. It now lives
+ * in the shell (app-shell.tsx), around every signed-in screen, so this is only
+ * what its name says.
  */
 export function AppHeader({
   title,
@@ -25,63 +16,10 @@ export function AppHeader({
   title: string;
   actions?: ReactNode;
 }) {
-  const session = useSession();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  // The one link that is hidden rather than shown-and-explained: settings is
-  // administration, and a section that most of a firm cannot enter is noise in
-  // their navigation rather than a place they should know exists.
-  const canSeeSettings = useHasPermission("roles.view");
-
-  async function signOut() {
-    try {
-      await apiFetch("/api/auth/logout", { method: "POST" });
-    } catch {
-      // Already signed out, or unreachable. Either way the local answer is the
-      // same, and there is nothing useful to say about a session that is gone.
-    }
-
-    queryClient.clear();
-    void navigate({ to: "/login" });
-  }
-
   return (
-    <>
-      <nav className="app-nav" aria-label="الأقسام">
-        <Link to="/dashboard" activeProps={{ className: "current" }}>
-          الرئيسية
-        </Link>
-        <Link to="/cases" search={{}} activeProps={{ className: "current" }}>
-          القضايا
-        </Link>
-        <Link to="/clients" search={{}} activeProps={{ className: "current" }}>
-          العملاء
-        </Link>
-        <Link to="/tasks" search={{}} activeProps={{ className: "current" }}>
-          المهام
-        </Link>
-        {canSeeSettings && (
-          <Link to="/settings/roles" activeProps={{ className: "current" }}>
-            الإعدادات
-          </Link>
-        )}
-
-        <GlobalSearch />
-
-        {session.data && (
-          <span className="identity">
-            <span>{displayName(session.data.user)}</span>
-            <button type="button" className="link" onClick={signOut}>
-              تسجيل الخروج
-            </button>
-          </span>
-        )}
-      </nav>
-
-      <header className="page-header">
-        <h1>{title}</h1>
-        {actions && <div className="identity">{actions}</div>}
-      </header>
-    </>
+    <header className="page-header">
+      <h1>{title}</h1>
+      {actions && <div className="page-actions">{actions}</div>}
+    </header>
   );
 }

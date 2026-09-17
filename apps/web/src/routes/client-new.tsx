@@ -9,7 +9,7 @@ import {
 } from "./client-form.js";
 
 export function ClientNewPage() {
-  const search = useSearch({ from: "/clients/new" });
+  const search = useSearch({ from: "/app/clients/new" });
   const navigate = useNavigate();
   const create = useCreateClient();
   const canManage = useHasPermission("clients.manage");
@@ -34,7 +34,7 @@ export function ClientNewPage() {
   return (
     <main className="narrow">
       <p className="back">
-        <Link {...backTo}>← العودة إلى قائمة العملاء</Link>
+        <Link {...backTo}>→ العودة إلى قائمة العملاء</Link>
       </p>
 
       <h1>عميل جديد</h1>

@@ -55,53 +55,66 @@ export function LoginPage() {
   }
 
   return (
-    <main className="narrow">
-      <h1>تسجيل الدخول</h1>
-
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="email">البريد الإلكتروني</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            // Latin text in an Arabic page: the field runs left-to-right so the
-            // caret and any punctuation behave as the person typing expects,
-            // while its label stays right-to-left.
-            dir="ltr"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
+    // Outside the shell: there is nothing to navigate to before signing in.
+    <div className="standalone">
+      <main className="narrow">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true">
+            ق
+          </span>
+          <span>
+            <span className="brand-name">المنصة القانونية</span>
+            <span className="brand-sub">إدارة المكتب</span>
+          </span>
         </div>
 
-        <div>
-          <label htmlFor="password">كلمة المرور</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            dir="ltr"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </div>
+        <form onSubmit={handleSubmit} className="card">
+          <h1>تسجيل الدخول</h1>
 
-        {status === "error" && (
-          // aria-live so a screen reader announces the failure without the
-          // focus having to move to it.
-          <p className="error" role="alert" aria-live="polite">
-            {GENERIC_ERROR}
-          </p>
-        )}
+          <div>
+            <label htmlFor="email">البريد الإلكتروني</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              // Latin text in an Arabic page: the field runs left-to-right so the
+              // caret and any punctuation behave as the person typing expects,
+              // while its label stays right-to-left.
+              dir="ltr"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </div>
 
-        <button type="submit" disabled={status === "submitting"}>
-          {status === "submitting" ? "جارٍ تسجيل الدخول…" : "تسجيل الدخول"}
-        </button>
-      </form>
-    </main>
+          <div>
+            <label htmlFor="password">كلمة المرور</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              dir="ltr"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </div>
+
+          {status === "error" && (
+            // aria-live so a screen reader announces the failure without the
+            // focus having to move to it.
+            <p className="error" role="alert" aria-live="polite">
+              {GENERIC_ERROR}
+            </p>
+          )}
+
+          <button type="submit" disabled={status === "submitting"}>
+            {status === "submitting" ? "جارٍ تسجيل الدخول…" : "تسجيل الدخول"}
+          </button>
+        </form>
+      </main>
+    </div>
   );
 }

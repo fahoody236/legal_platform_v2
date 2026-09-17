@@ -162,7 +162,7 @@ export function Representatives({
       )}
 
       {representatives.length === 0 && !adding && (
-        <p className="state">لا يوجد ممثلون مسجَّلون.</p>
+        <p className="state empty">لا يوجد ممثلون مسجَّلون.</p>
       )}
 
       <ul className="representative-list">

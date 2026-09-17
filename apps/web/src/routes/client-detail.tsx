@@ -27,15 +27,15 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function ClientDetailPage() {
-  const { clientId } = useParams({ from: "/clients/$clientId" });
-  const search = useSearch({ from: "/clients/$clientId" });
+  const { clientId } = useParams({ from: "/app/clients/$clientId" });
+  const search = useSearch({ from: "/app/clients/$clientId" });
   const query = useClient(clientId);
 
   return (
     <main className="wide">
       <p className="back">
         <Link to="/clients" search={search}>
-          ← العودة إلى قائمة العملاء
+          → العودة إلى قائمة العملاء
         </Link>
       </p>
 
@@ -158,7 +158,7 @@ function ClientDetail({ record }: { record: ClientWithRepresentatives }) {
       <header className="page-header">
         <h1>{record.nameAr}</h1>
 
-        <div className="identity">
+        <div className="page-actions">
           <span className="badge" style={{ color: "#1f3d8f", background: "#e9eefb" }}>
             {CLIENT_TYPE_LABELS[record.clientType]}
           </span>

@@ -1,44 +1,604 @@
 /*
- * Placeholder styling — enough to be legible, not a design.
+ * The design system, as plain CSS.
  *
- * Every directional value is a logical property: inline-start/end rather than
- * left/right, and `text-align: start` rather than `left`. These resolve against
- * the document direction, so the same rule reads correctly in Arabic and would
- * still read correctly if any part of the interface were ever left-to-right.
+ * The values are the prototype's (artifacts/alhumoudi-lawyers), carried over
+ * as tokens so the two products look like one family — but the typography,
+ * the direction and the layout are this application's own. Every directional
+ * value is a logical property: inline-start/end rather than left/right,
+ * `text-align: start` rather than `left`, `inset-inline-start` rather than
+ * `left` or `translateX`. They resolve against the document direction, so the
+ * same rule reads correctly in Arabic and would still read correctly if any
+ * part of the interface were ever left-to-right.
  *
- * Writing them this way from the first stylesheet is the whole point. Physical
- * properties are not wrong until someone changes direction, at which point they
- * are all wrong at once and there is no way to find them except by looking.
+ * Physical properties are not wrong until someone changes direction, at which
+ * point they are all wrong at once and there is no way to find them except by
+ * looking. That is why there are none here.
  */
 
+/*
+ * IBM Plex Sans Arabic, self-hosted.
+ *
+ * Bundled from the package rather than linked from Google Fonts: a font served
+ * by a third party is a request to that third party on every page view, from a
+ * product whose premise is that nothing leaves the Kingdom — and a first paint
+ * that depends on a CDN outside our control. The files below are served from
+ * our own origin like any other asset.
+ *
+ * Four weights, two scripts. The family ships its own Latin drawn to the same
+ * x-height and stroke as the Arabic, which is what keeps a case number or an
+ * email in the middle of a sentence from jumping in size or colour the way a
+ * system-font fallback would. That Latin is the fallback for identifiers.
+ */
+@import "@fontsource/ibm-plex-sans-arabic/arabic-400.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-500.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-600.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-700.css";
+@import "@fontsource/ibm-plex-sans-arabic/latin-400.css";
+@import "@fontsource/ibm-plex-sans-arabic/latin-500.css";
+@import "@fontsource/ibm-plex-sans-arabic/latin-600.css";
+@import "@fontsource/ibm-plex-sans-arabic/latin-700.css";
+
+/* ── Tokens ───────────────────────────────────────────────────────────────── */
+
+/*
+ * Colours are HSL triplets without the function, as the prototype stores them,
+ * so a rule can write `hsl(var(--primary) / 60%)` for a translucent variant
+ * without a second token. The status colours (open, pending, overdue…) are not
+ * here: they live beside their labels in lib/*.ts, because a status and its
+ * colour are one decision and the label is the part that has to be readable.
+ */
 :root {
-  font-family: system-ui, "Segoe UI", Tahoma, sans-serif;
-  line-height: 1.6;
+  --background: 210 20% 98%;
+  --foreground: 220 45% 15%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 220 45% 15%;
+  --card-border: 214 32% 91%;
+
+  --primary: 220 45% 15%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 214 32% 91%;
+  --secondary-foreground: 220 45% 15%;
+
+  --muted: 210 20% 95%;
+  --muted-foreground: 215 16% 47%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 220 45% 15%;
+
+  --sidebar: 220 45% 15%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-border: 220 45% 18%;
+  --sidebar-accent: 220 45% 20%;
+
+  --radius: 0.3rem;
+
+  --font-sans:
+    "IBM Plex Sans Arabic", system-ui, "Segoe UI", Tahoma, sans-serif;
+
+  --sidebar-width: 15rem;
+  --topbar-height: 3.25rem;
+
+  /* Three ambers and reds shared by the "denied" and "error" states, kept off
+     the token list above because they are this stylesheet's, not the system's. */
+  --warn-border: #8a5a06;
+  --warn-background: #fdf3e3;
+  --warn-foreground: #6b4605;
+  --danger-border: #a3282a;
+  --danger-background: #fdf2f2;
+  --danger-foreground: #7a1f21;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  font-family: var(--font-sans);
+  /* Arabic wants a taller line than Latin: the ascenders, the dots above and
+     below, and the tashkeel all need the room. */
+  line-height: 1.7;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
   margin: 0;
-  padding-block: 4rem;
-  padding-inline: 1.5rem;
-  background: #fbfbfa;
-  color: #1a1a18;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
-main.narrow {
-  max-inline-size: 24rem;
-  margin-inline: auto;
-}
-
-main.wide {
-  max-inline-size: 68rem;
-  margin-inline: auto;
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-align: start;
 }
 
 h1 {
   font-size: 1.5rem;
-  margin-block-end: 1.5rem;
-  text-align: start;
+  margin-block: 0 1.25rem;
 }
+
+h2 {
+  font-size: 1.15rem;
+  margin-block: 0 0.75rem;
+}
+
+h3 {
+  font-size: 1.05rem;
+}
+
+a {
+  color: hsl(var(--primary));
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+/*
+ * A Latin or numeric run — case numbers, identifiers, emails — inside Arabic
+ * text. The dir attribute keeps the run's own order; tabular figures keep the
+ * digits in columns so numbers line up down a table.
+ */
+.case-number,
+[dir="ltr"] {
+  font-variant-numeric: tabular-nums;
+}
+
+.case-number {
+  white-space: nowrap;
+}
+
+.muted {
+  color: hsl(var(--muted-foreground));
+}
+
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* ── Shell: sidebar, top bar, page ────────────────────────────────────────── */
+
+/*
+ * Two columns: the sidebar and everything else. The sidebar is the first
+ * child, so in a right-to-left document it lands on the right — the grid does
+ * the direction, not the stylesheet.
+ */
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  min-block-size: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  inset-block-start: 0;
+  block-size: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: hsl(var(--sidebar));
+  color: hsl(var(--sidebar-foreground));
+  border-inline-end: 1px solid hsl(var(--sidebar-border));
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-block: 1.1rem;
+  padding-inline: 1rem;
+  border-block-end: 1px solid hsl(var(--sidebar-border));
+}
+
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-inline-size: 0;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius);
+}
+
+.brand-link:focus-visible {
+  outline-color: hsl(var(--sidebar-foreground));
+}
+
+/*
+ * A directional glyph — the sign-out arrow leaves through the door — mirrored
+ * for a right-to-left document. This is the one transform in the stylesheet
+ * and it is direction-aware by construction: it applies only under dir="rtl".
+ */
+html[dir="rtl"] .mirror {
+  transform: scaleX(-1);
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  flex: 0 0 auto;
+  border-radius: calc(var(--radius) + 2px);
+  background: hsl(var(--sidebar-foreground));
+  color: hsl(var(--sidebar));
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.brand-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.brand-sub {
+  display: block;
+  font-size: 0.72rem;
+  color: hsl(var(--sidebar-foreground) / 45%);
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding-block: 0.75rem;
+  padding-inline: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-block: 0.5rem;
+  padding-inline: 0.75rem;
+  border-radius: calc(var(--radius) + 2px);
+  color: hsl(var(--sidebar-foreground) / 65%);
+  font-size: 0.92rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.sidebar-nav a:hover {
+  background: hsl(var(--sidebar-accent));
+  color: hsl(var(--sidebar-foreground));
+}
+
+/*
+ * The current section is marked rather than removed, so the set of places
+ * stays the same shape wherever you are standing in it. The prototype marks it
+ * with the primary colour; here primary and sidebar are the same navy, so the
+ * mark is a lighter step plus the full-strength text.
+ */
+.sidebar-nav a.current {
+  background: hsl(var(--sidebar-foreground) / 12%);
+  color: hsl(var(--sidebar-foreground));
+}
+
+.sidebar-nav a:focus-visible {
+  outline-color: hsl(var(--sidebar-foreground));
+}
+
+.sidebar-nav svg {
+  inline-size: 1.05rem;
+  block-size: 1.05rem;
+  flex: 0 0 auto;
+}
+
+.sidebar-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-block: 0.85rem;
+  padding-inline: 1rem;
+  border-block-start: 1px solid hsl(var(--sidebar-border));
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: hsl(var(--sidebar-foreground) / 18%);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.sidebar-identity {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.sidebar-identity strong {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-identity span {
+  display: block;
+  font-size: 0.72rem;
+  color: hsl(var(--sidebar-foreground) / 45%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar .icon-button {
+  color: hsl(var(--sidebar-foreground) / 55%);
+}
+
+.sidebar .icon-button:hover {
+  color: hsl(var(--sidebar-foreground));
+  background: hsl(var(--sidebar-accent));
+}
+
+.sidebar .icon-button:focus-visible {
+  outline-color: hsl(var(--sidebar-foreground));
+}
+
+.shell-main {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.topbar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  block-size: var(--topbar-height);
+  padding-inline: 1rem;
+  border-block-end: 1px solid hsl(var(--border) / 70%);
+  background: hsl(var(--card) / 85%);
+  backdrop-filter: blur(6px);
+}
+
+/* Only on a narrow screen; see the media query at the end. */
+.topbar .menu-button,
+.topbar .brand-name {
+  display: none;
+}
+
+/* A square button holding one icon, used for the menu and for sign-out. */
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.icon-button svg {
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+}
+
+/* Text for assistive technology only. */
+.sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.page {
+  flex: 1;
+  padding-block: 1.75rem 4rem;
+  padding-inline: 2rem;
+}
+
+main.narrow {
+  max-inline-size: 26rem;
+  margin-inline: auto;
+}
+
+main.wide {
+  max-inline-size: 72rem;
+  margin-inline: auto;
+}
+
+/*
+ * The sign-in screen stands outside the shell: nothing to navigate to yet. It
+ * is centred on the page background in its own card.
+ */
+.standalone {
+  min-block-size: 100vh;
+  display: grid;
+  place-items: center;
+  padding-block: 2rem;
+  padding-inline: 1rem;
+}
+
+.standalone main {
+  inline-size: 100%;
+}
+
+.standalone .brand {
+  justify-content: center;
+  border: 0;
+  padding-block: 0 1.5rem;
+  color: hsl(var(--foreground));
+}
+
+.standalone .brand-mark {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.standalone .brand-sub {
+  color: hsl(var(--muted-foreground));
+}
+
+/* ── Page header ──────────────────────────────────────────────────────────── */
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-block-end: 1.25rem;
+}
+
+.page-header h1,
+.page-header h2 {
+  margin-block-end: 0;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.back {
+  margin-block: 0 1rem;
+  font-size: 0.9rem;
+}
+
+.back a {
+  color: hsl(var(--muted-foreground));
+  text-decoration: none;
+}
+
+.back a:hover {
+  color: hsl(var(--foreground));
+  text-decoration: underline;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+
+button,
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-block-size: 2.25rem;
+  padding-block: 0.35rem;
+  padding-inline: 1rem;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  border: 1px solid hsl(var(--primary));
+  border-radius: var(--radius);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button:hover,
+.button-link:hover {
+  background: hsl(var(--primary) / 90%);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button:disabled:hover {
+  background: hsl(var(--primary));
+}
+
+button.secondary {
+  background: hsl(var(--secondary));
+  border-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+
+button.secondary:hover {
+  background: hsl(var(--secondary) / 70%);
+}
+
+button.secondary:disabled:hover {
+  background: hsl(var(--secondary));
+}
+
+button.destructive {
+  background: hsl(var(--destructive));
+  border-color: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+}
+
+/* A button that reads as a link: an action among text, with no box. */
+button.link {
+  min-block-size: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: hsl(var(--primary));
+  font-size: inherit;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  white-space: normal;
+}
+
+button.link:hover {
+  background: none;
+  color: hsl(var(--primary) / 75%);
+}
+
+button.link:disabled:hover {
+  background: none;
+}
+
+button.small,
+.pagination button,
+.task-actions button {
+  min-block-size: 2rem;
+  padding-inline: 0.8rem;
+  font-size: 0.85rem;
+}
+
+/* ── Forms ────────────────────────────────────────────────────────────────── */
 
 form {
   display: flex;
@@ -46,60 +606,78 @@ form {
   gap: 1rem;
 }
 
-label {
+label,
+.label-like {
   display: block;
-  margin-block-end: 0.25rem;
-  font-size: 0.9rem;
+  margin-block-end: 0.3rem;
+  font-size: 0.88rem;
+  font-weight: 500;
 }
 
-input {
+input,
+select,
+textarea {
   inline-size: 100%;
-  box-sizing: border-box;
-  padding-block: 0.5rem;
+  min-block-size: 2.25rem;
+  padding-block: 0.4rem;
   padding-inline: 0.75rem;
   font: inherit;
-  border: 1px solid #c9c9c4;
-  border-radius: 4px;
-  background: #fff;
+  font-size: 0.92rem;
+  color: inherit;
+  border: 1px solid hsl(var(--input));
+  border-radius: var(--radius);
+  background: hsl(var(--card));
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
 }
 
-input:focus-visible {
-  outline: 2px solid #2b5fd9;
-  outline-offset: 1px;
+input::placeholder,
+textarea::placeholder {
+  color: hsl(var(--muted-foreground));
 }
 
-button {
-  padding-block: 0.6rem;
-  padding-inline: 1rem;
-  font: inherit;
-  border: 0;
-  border-radius: 4px;
-  background: #1f3d8f;
-  color: #fff;
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 0;
+  border-color: hsl(var(--ring));
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: hsl(var(--destructive));
+}
+
+textarea {
+  resize: vertical;
+  min-block-size: 4.5rem;
+}
+
+select {
   cursor: pointer;
 }
 
-button:disabled {
-  background: #8a8a84;
-  cursor: default;
+input[type="checkbox"],
+input[type="radio"] {
+  inline-size: 1rem;
+  block-size: 1rem;
+  min-block-size: 0;
+  margin: 0;
+  padding: 0;
+  box-shadow: none;
+  accent-color: hsl(var(--primary));
 }
 
-.error {
-  /* border-inline-start, so the accent sits on the leading edge in either
-     direction rather than always on the left. */
-  padding-block: 0.6rem;
-  padding-inline: 0.75rem;
-  border-inline-start: 3px solid #a3282a;
-  background: #fdf2f2;
-  color: #7a1f21;
-  font-size: 0.9rem;
-}
-
-.signed-in {
-  padding-block: 0.75rem;
-  padding-inline: 1rem;
-  border-inline-start: 3px solid #1f6b3a;
-  background: #f1f8f3;
+input[type="search"]::-webkit-search-cancel-button {
+  display: none;
 }
 
 /*
@@ -113,66 +691,224 @@ input[dir="ltr"] {
   text-align: start;
 }
 
-/* ── Cases screen ─────────────────────────────────────────────────────────── */
+.field {
+  margin-block-end: 1rem;
+}
 
-.page-header {
+form > .field {
+  margin-block-end: 0;
+}
+
+.hint {
+  margin-block: 0.3rem 0;
+  font-size: 0.8rem;
+  color: hsl(var(--muted-foreground));
+}
+
+/*
+ * The accent sits on the leading edge, so it reads as attached to the field in
+ * either direction rather than always on the left.
+ */
+.field-error {
+  margin-block: 0.4rem 0;
+  padding-inline-start: 0.6rem;
+  border-inline-start: 3px solid hsl(var(--destructive));
+  color: var(--danger-foreground);
+  font-size: 0.85rem;
+}
+
+.form-actions {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  gap: 0.6rem;
+  margin-block-start: 0.5rem;
+}
+
+.fixed-value {
+  margin: 0;
+}
+
+/* A checkbox and its label on one line. */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-block-end: 0;
+  font-size: 0.9rem;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.toggle input[type="checkbox"] {
+  inline-size: 1rem;
+}
+
+/* Filters above a list: labels, selects and toggles on one wrapping row. */
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-block: 0 1rem;
+}
+
+.filters label {
+  margin-block-end: 0;
+  color: hsl(var(--muted-foreground));
+}
+
+.filters select {
+  inline-size: auto;
+  min-inline-size: 9rem;
+}
+
+/* Pushed to the far end of the filter row, away from the selects. */
+.filters .button-link {
+  margin-inline-start: auto;
+}
+
+/* A block of fields grouped inside a bordered box: a sub-form on a page. */
+.task-form,
+.representative-form,
+.role-editor {
+  inline-size: 100%;
+  margin-block: 1rem;
+  padding-block: 1.25rem;
+  padding-inline: 1.25rem;
+  border: 1px solid hsl(var(--card-border));
+  border-radius: calc(var(--radius) + 2px);
+  background: hsl(var(--card));
+}
+
+/* Three short fields side by side, stacking when there is no room. */
+.task-form-row-inline {
+  display: flex;
   gap: 1rem;
   flex-wrap: wrap;
 }
 
-.page-header h1 {
-  margin-block-end: 0;
+.task-form-row-inline .field {
+  flex: 1;
+  min-inline-size: 10rem;
 }
 
-.identity {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
+/* ── Alerts and states ────────────────────────────────────────────────────── */
+
+/*
+ * The form-level failure: something the whole submission has to hear, rather
+ * than one field.
+ */
+.error {
+  margin: 0;
+  padding-block: 0.7rem;
+  padding-inline: 0.9rem;
+  border: 1px solid hsl(var(--destructive) / 30%);
+  border-inline-start: 3px solid hsl(var(--destructive));
+  border-radius: var(--radius);
+  background: var(--danger-background);
+  color: var(--danger-foreground);
   font-size: 0.9rem;
-  color: #55554e;
 }
 
-button.link {
-  padding: 0;
-  background: none;
-  color: #1f3d8f;
-  text-decoration: underline;
-  font-size: inherit;
+/* Loading, empty, and "nothing to show" — quiet text in the middle. */
+.state {
+  margin: 0;
+  padding-block: 2.5rem;
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.95rem;
 }
 
-.filters {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-block: 1.5rem 1rem;
-}
-
-select {
-  padding-block: 0.4rem;
-  padding-inline: 0.6rem;
-  font: inherit;
-  border: 1px solid #c9c9c4;
-  border-radius: 4px;
-  background: #fff;
+/* The empty state of a list gets a dashed frame, as the prototype's does. */
+.state.empty {
+  border: 1px dashed hsl(var(--border));
+  border-radius: calc(var(--radius) + 2px);
 }
 
 /*
- * The table is the one thing here that can outgrow a narrow window. It scrolls
- * inside its own box rather than pushing the page sideways, which in a
- * right-to-left layout is worse than it sounds: the overflow appears off the
- * left edge, where nobody is looking for it.
+ * A denied action is not a fault. It gets its own treatment — neutral rather
+ * than alarming — because the message is "ask someone for access", not "try
+ * again" or "something broke".
+ */
+.state.denied {
+  padding-block: 0.8rem;
+  padding-inline: 1rem;
+  border: 1px solid #ecd9b5;
+  border-inline-start: 3px solid var(--warn-border);
+  border-radius: var(--radius);
+  background: var(--warn-background);
+  color: var(--warn-foreground);
+  text-align: start;
+}
+
+.state.error {
+  padding-block: 0.8rem;
+  padding-inline: 1rem;
+  border: 1px solid hsl(var(--destructive) / 30%);
+  border-inline-start: 3px solid hsl(var(--destructive));
+  border-radius: var(--radius);
+  background: var(--danger-background);
+  color: var(--danger-foreground);
+  text-align: start;
+}
+
+.signed-in {
+  padding-block: 0.75rem;
+  padding-inline: 1rem;
+  border-inline-start: 3px solid #1f6b3a;
+  background: #f1f8f3;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────────────── */
+
+/*
+ * A form that is the whole screen — create, edit, sign in — sits in a card.
+ * Selected by position rather than by a class on each form component, so the
+ * same CaseForm is framed on its page and unframed if ever embedded elsewhere.
+ */
+.card,
+.panel,
+main.narrow > form,
+article > form {
+  padding-block: 1.25rem;
+  padding-inline: 1.5rem;
+  border: 1px solid hsl(var(--card-border));
+  border-radius: calc(var(--radius) + 4px);
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+}
+
+.panel h2 {
+  margin-block: 0 1rem;
+  font-size: 1rem;
+}
+
+.panel .state {
+  padding-block: 1.25rem;
+}
+
+/* ── Tables ───────────────────────────────────────────────────────────────── */
+
+/*
+ * The table sits in a card and scrolls inside its own box rather than pushing
+ * the page sideways, which in a right-to-left layout is worse than it sounds:
+ * the overflow appears off the left edge, where nobody is looking for it.
  */
 .table-scroll {
   overflow-x: auto;
+  border: 1px solid hsl(var(--card-border));
+  border-radius: calc(var(--radius) + 4px);
+  background: hsl(var(--card));
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
 }
 
 table {
   inline-size: 100%;
+  /* Below this the columns crush into one-word-per-line cells; past it the
+     table scrolls inside .table-scroll instead. */
+  min-inline-size: 44rem;
   border-collapse: collapse;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
 }
 
 th,
@@ -180,21 +916,26 @@ td {
   /* start/end, so the columns align to the right in Arabic and would align to
      the left unchanged if any part of this were ever presented in English. */
   text-align: start;
-  padding-block: 0.6rem;
-  padding-inline: 0.75rem;
-  border-block-end: 1px solid #e4e4e0;
-  vertical-align: top;
+  padding-block: 0.65rem;
+  padding-inline: 1rem;
+  border-block-end: 1px solid hsl(var(--border));
+  vertical-align: middle;
 }
 
 th {
-  font-weight: 600;
-  color: #55554e;
-  border-block-end-width: 2px;
+  font-weight: 500;
+  font-size: 0.82rem;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted) / 60%);
   white-space: nowrap;
 }
 
+tbody tr:last-child td {
+  border-block-end: 0;
+}
+
 tbody tr:hover {
-  background: #f5f5f3;
+  background: hsl(var(--muted) / 50%);
 }
 
 .row-link {
@@ -208,6 +949,7 @@ tbody tr:hover {
  */
 .row-link a {
   color: inherit;
+  font-weight: 500;
   text-decoration: none;
 }
 
@@ -216,47 +958,28 @@ tbody tr:hover {
   text-decoration: underline;
 }
 
-.case-number {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.badge {
-  display: inline-block;
-  padding-block: 0.15rem;
-  padding-inline: 0.5rem;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  white-space: nowrap;
-}
-
-.muted {
-  color: #8a8a84;
-}
-
-.state {
-  padding-block: 2rem;
-  text-align: center;
-  color: #55554e;
-}
+/* ── Badges ───────────────────────────────────────────────────────────────── */
 
 /*
- * A denied action is not a fault. It gets its own treatment — neutral rather
- * than alarming — because the message is "ask someone for access", not "try
- * again" or "something broke".
+ * The colour and background come from the status tables in lib/*.ts, inline;
+ * this rule owns the shape. The border is derived from the text colour, so a
+ * badge of any colour gets the prototype's outlined pill without a second
+ * value to keep in step.
  */
-.state.denied {
-  padding-block: 1rem;
-  padding-inline: 1rem;
-  border-inline-start: 3px solid #8a5a06;
-  background: #fdf3e3;
-  color: #6b4605;
-  text-align: start;
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding-block: 0.1rem;
+  padding-inline: 0.6rem;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
 }
 
-.state.error {
-  text-align: start;
-}
+/* ── Pagination ───────────────────────────────────────────────────────────── */
 
 .pagination {
   display: flex;
@@ -266,44 +989,50 @@ tbody tr:hover {
 }
 
 .pagination button {
-  padding-block: 0.4rem;
-  padding-inline: 0.9rem;
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.pagination button:hover {
+  background: hsl(var(--muted));
+}
+
+.pagination button:disabled:hover {
+  background: hsl(var(--card));
 }
 
 .page-count {
-  font-size: 0.9rem;
-  color: #55554e;
+  font-size: 0.88rem;
+  color: hsl(var(--muted-foreground));
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Case detail ──────────────────────────────────────────────────────────── */
-
-.back {
-  margin-block: 0 1.5rem;
-  font-size: 0.9rem;
-}
-
-.back a {
-  color: #1f3d8f;
-}
+/* ── Detail (field/value pairs) ───────────────────────────────────────────── */
 
 /*
- * Field and value pairs as a two-column grid over a <dl>. `auto` first, so the
- * labels size to their content and the values take the rest — in RTL the labels
- * land on the right, which is where they belong, without a single physical
- * property being named.
+ * Field and value pairs as a two-column grid over a <dl>, inside a card.
+ * `auto` first, so the labels size to their content and the values take the
+ * rest — in RTL the labels land on the right, which is where they belong,
+ * without a single physical property being named.
  */
 .detail {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.6rem 1.5rem;
-  margin-block: 1.5rem 0;
+  gap: 0.7rem 2rem;
   align-items: baseline;
+  margin-block: 0;
+  padding-block: 1.25rem;
+  padding-inline: 1.5rem;
+  border: 1px solid hsl(var(--card-border));
+  border-radius: calc(var(--radius) + 4px);
+  background: hsl(var(--card));
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
 }
 
 .detail dt {
-  font-size: 0.9rem;
-  color: #55554e;
+  font-size: 0.85rem;
+  color: hsl(var(--muted-foreground));
   white-space: nowrap;
 }
 
@@ -319,197 +1048,150 @@ tbody tr:hover {
   display: inline-block;
 }
 
-@media (max-width: 32rem) {
-  /* One column on a narrow screen: a label and its value stacked reads better
-     than a two-column grid squeezed to nothing. */
-  .detail {
-    grid-template-columns: 1fr;
-    gap: 0.15rem 0;
-  }
-
-  .detail dd {
-    margin-block-end: 0.9rem;
-  }
-}
-
-/* ── Forms ────────────────────────────────────────────────────────────────── */
-
-.field {
-  margin-block-end: 1rem;
-}
-
-.field select {
-  inline-size: 100%;
-  box-sizing: border-box;
-}
-
-.hint {
-  margin-block: 0.25rem 0;
-  font-size: 0.8rem;
-  color: #77776f;
-}
-
-/*
- * The accent sits on the leading edge, so it reads as attached to the field in
- * either direction rather than always on the left.
- */
-.field-error {
-  margin-block: 0.35rem 0;
-  padding-inline-start: 0.6rem;
-  border-inline-start: 3px solid #a3282a;
-  color: #7a1f21;
-  font-size: 0.85rem;
-}
-
-.form-actions {
-  display: flex;
-  gap: 0.75rem;
-  margin-block-start: 1.5rem;
-}
-
-button.secondary {
-  background: transparent;
-  color: #1f3d8f;
-  border: 1px solid #c9c9c4;
-}
-
-button.secondary:disabled {
-  background: transparent;
-  color: #8a8a84;
-}
-
-/* A link that leads to an action, styled as the button it behaves like. */
-.button-link {
-  padding-block: 0.4rem;
-  padding-inline: 0.9rem;
-  border-radius: 4px;
-  background: #1f3d8f;
-  color: #fff;
-  text-decoration: none;
-  font-size: 0.9rem;
-  /* Pushed to the far end of the filter row, away from the status select. */
-  margin-inline-start: auto;
-}
-
-.button-link:hover {
-  background: #16306f;
-}
-
-/* ── Section navigation ───────────────────────────────────────────────────── */
-
-.app-nav {
-  display: flex;
-  align-items: baseline;
-  gap: 1.25rem;
-  margin-block-end: 1.5rem;
-  padding-block-end: 0.75rem;
-  border-block-end: 1px solid #e4e4e0;
-  font-size: 0.95rem;
-}
-
-.app-nav a {
-  color: #1f3d8f;
-  text-decoration: none;
-}
-
-.app-nav a:hover {
-  text-decoration: underline;
-}
-
-/*
- * The current section is marked rather than removed, so the set of places stays
- * the same shape wherever you are standing in it.
- */
-.app-nav a.current {
-  color: #1a1a18;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: default;
-}
-
-/* Pushed to the far end of the row, away from the section links. */
-.app-nav .identity {
-  margin-inline-start: auto;
-}
-
-textarea {
-  inline-size: 100%;
-  box-sizing: border-box;
-  padding-block: 0.5rem;
-  padding-inline: 0.75rem;
-  font: inherit;
-  border: 1px solid #c9c9c4;
-  border-radius: 4px;
-  background: #fff;
-  resize: vertical;
-}
-
-.fixed-value {
-  margin: 0;
-}
-
-/* ── Representatives ──────────────────────────────────────────────────────── */
-
+/* Sections under a detail: assignment, tasks, representatives. */
+.assignment,
+.tasks-section,
 .representatives {
-  margin-block-start: 2.5rem;
-  padding-block-start: 1.5rem;
-  border-block-start: 1px solid #e4e4e0;
+  margin-block-start: 2rem;
 }
 
-.representatives h2 {
-  font-size: 1.15rem;
-  margin: 0;
+/* An edit form on a wide page keeps a form's width, not the page's. */
+article > form {
+  max-inline-size: 40rem;
 }
 
-.representative-list {
+.assignment {
+  max-inline-size: 28rem;
+  padding-block: 1rem;
+  padding-inline: 1.25rem;
+  border: 1px solid hsl(var(--card-border));
+  border-radius: calc(var(--radius) + 4px);
+  background: hsl(var(--card));
+}
+
+.assignment select {
+  inline-size: 100%;
+}
+
+/* ── Row lists (tasks, representatives, roles, users) ─────────────────────── */
+
+.plain-list,
+.task-list,
+.representative-list,
+.search-results,
+.search-groups {
   list-style: none;
-  margin: 1rem 0 0;
+  margin: 0;
   padding: 0;
 }
 
-.representative-list > li {
+.task-list,
+.representative-list,
+.role-list,
+.user-list {
+  border: 1px solid hsl(var(--card-border));
+  border-radius: calc(var(--radius) + 4px);
+  background: hsl(var(--card));
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+}
+
+.task-list > li,
+.representative-list > li,
+.role-list > li,
+.user-list > li {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.75rem;
-  padding-block: 0.7rem;
-  border-block-end: 1px solid #e4e4e0;
+  align-items: flex-start;
+  gap: 1rem;
+  padding-block: 0.9rem;
+  padding-inline: 1.25rem;
+  border-block-end: 1px solid hsl(var(--border));
 }
 
-/* Archived people stay listed but recede: still readable, plainly not current. */
-.representative-list > li.archived {
-  color: #77776f;
+.task-list > li:last-child,
+.representative-list > li:last-child,
+.role-list > li:last-child,
+.user-list > li:last-child {
+  border-block-end: 0;
 }
 
+/* A sub-form inside a list takes the row's place, edge to edge. */
+.task-list > li.task-form-row,
+.role-list > li.role-form-row,
+.representative-list > li.representative-form {
+  display: block;
+  padding-block: 0.75rem;
+}
+
+.task-list > li.task-form-row .task-form,
+.role-list > li.role-form-row .role-editor {
+  margin-block: 0;
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+  background: none;
+}
+
+.representative-list > li.representative-form {
+  margin-block: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Archived people and finished tasks stay listed but recede. */
+.representative-list > li.archived,
+.user-list > li.muted {
+  color: hsl(var(--muted-foreground));
+}
+
+.task-list > li.done .task-title strong {
+  color: hsl(var(--muted-foreground));
+  text-decoration: line-through;
+}
+
+.task-main,
+.role-main,
 .representative-summary {
   flex: 1;
+  min-inline-size: 16rem;
 }
 
+.task-title,
+.role-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.task-description {
+  margin-block: 0.35rem 0;
+  font-size: 0.9rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.task-meta,
+.role-permissions {
+  margin-block: 0.3rem 0;
+  font-size: 0.84rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.task-actions,
 .representative-actions {
   display: flex;
+  align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
-.representative-form {
-  margin-block: 1rem;
-  padding-block: 1rem;
-  padding-inline: 1rem;
-  border: 1px solid #e4e4e0;
-  border-radius: 4px;
-  background: #fff;
+.task-actions select {
+  inline-size: auto;
+  min-block-size: 2rem;
+  font-size: 0.85rem;
 }
 
-.representative-form .form-actions {
-  margin-block-start: 1rem;
-}
-
-/* ── Client search ────────────────────────────────────────────────────────── */
-
-.label-like {
-  display: block;
-  margin-block-end: 0.25rem;
-  font-size: 0.9rem;
-}
+/* ── Client search (in the case form) ─────────────────────────────────────── */
 
 /*
  * The chosen client, in place of the search input. Showing the selection rather
@@ -518,34 +1200,23 @@ textarea {
  */
 .chosen {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.75rem;
-  padding-block: 0.5rem;
+  min-block-size: 2.25rem;
+  padding-block: 0.35rem;
   padding-inline: 0.75rem;
-  border: 1px solid #c9c9c4;
-  border-radius: 4px;
-  background: #fff;
+  border: 1px solid hsl(var(--input));
+  border-radius: var(--radius);
+  background: hsl(var(--muted) / 60%);
 }
 
 .chosen strong {
   flex: 1;
-}
-
-input[type="search"] {
-  inline-size: 100%;
-  box-sizing: border-box;
-  padding-block: 0.5rem;
-  padding-inline: 0.75rem;
-  font: inherit;
-  border: 1px solid #c9c9c4;
-  border-radius: 4px;
-  background: #fff;
+  font-weight: 500;
 }
 
 .search-results {
-  list-style: none;
-  margin: 0.35rem 0 0;
-  padding: 0;
+  margin-block-start: 0.35rem;
   /* Capped and scrollable: a long result list must not push the rest of the
      form off the screen. */
   max-block-size: 15rem;
@@ -553,35 +1224,39 @@ input[type="search"] {
 }
 
 .search-results:not(:empty) {
-  border: 1px solid #e4e4e0;
-  border-radius: 4px;
-  background: #fff;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--card));
+  box-shadow: 0 4px 12px rgb(0 0 0 / 6%);
 }
 
 .search-results li + li {
-  border-block-start: 1px solid #f0f0ee;
+  border-block-start: 1px solid hsl(var(--border));
 }
 
 .search-results button {
   inline-size: 100%;
+  justify-content: flex-start;
   /* start, so the option text begins at the leading edge in either direction. */
   text-align: start;
+  min-block-size: 0;
   padding-block: 0.5rem;
   padding-inline: 0.75rem;
   background: none;
   color: inherit;
   border: 0;
   border-radius: 0;
-  font: inherit;
+  font-weight: 400;
+  white-space: normal;
 }
 
 .search-results button:hover,
 .search-results button:focus-visible {
-  background: #f0f4fd;
+  background: hsl(var(--muted));
 }
 
 .result-name {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .no-matches {
@@ -590,10 +1265,12 @@ input[type="search"] {
   gap: 1rem;
   flex-wrap: wrap;
   margin-block-start: 0.5rem;
-  padding-block: 0.75rem;
-  padding-inline: 0.75rem;
-  border-inline-start: 3px solid #c9c9c4;
-  background: #f5f5f3;
+  padding-block: 0.7rem;
+  padding-inline: 0.9rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--muted) / 60%);
+  font-size: 0.9rem;
 }
 
 .no-matches p {
@@ -601,180 +1278,46 @@ input[type="search"] {
   flex: 1;
 }
 
-/* ── Modal ────────────────────────────────────────────────────────────────── */
+/* ── Dialog ───────────────────────────────────────────────────────────────── */
 
 /*
  * A native <dialog>. The margin rules centre it; `dialog` defaults to auto
  * margins that a stylesheet has to restate once any are set.
  */
 .modal {
-  inline-size: min(26rem, calc(100vw - 2rem));
+  inline-size: min(28rem, calc(100vw - 2rem));
   padding-block: 1.5rem;
   padding-inline: 1.5rem;
-  border: 1px solid #d8d8d2;
-  border-radius: 6px;
-  background: #fbfbfa;
-  color: inherit;
+  border: 1px solid hsl(var(--card-border));
+  border-radius: calc(var(--radius) + 4px);
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  box-shadow: 0 20px 50px rgb(0 0 0 / 20%);
 }
 
 .modal::backdrop {
-  background: rgb(0 0 0 / 35%);
+  background: rgb(0 0 0 / 55%);
 }
 
 .modal h2 {
   margin-block: 0 1.25rem;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
 }
 
-/* ── Case assignment ──────────────────────────────────────────────────────── */
-
-.assignment {
-  margin-block-start: 2.5rem;
-  padding-block-start: 1.5rem;
-  border-block-start: 1px solid #e4e4e0;
-  max-inline-size: 24rem;
-}
-
-.assignment select {
-  inline-size: 100%;
-  box-sizing: border-box;
-}
-
-/* ── Tasks ────────────────────────────────────────────────────────────────── */
-
-.tasks-section {
-  margin-block-start: 2.5rem;
-  padding-block-start: 1.5rem;
-  border-block-start: 1px solid #e4e4e0;
-}
-
-.tasks-section h2 {
-  font-size: 1.15rem;
-  margin: 0;
-}
-
-.task-list {
-  list-style: none;
-  margin: 1rem 0 0;
-  padding: 0;
-}
-
-.task-list > li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 1rem;
-  padding-block: 0.8rem;
-  border-block-end: 1px solid #e4e4e0;
-}
-
-/* A finished task recedes: still readable, plainly not outstanding work. */
-.task-list > li.done .task-title strong {
-  color: #77776f;
-  text-decoration: line-through;
-}
-
-.task-main {
-  flex: 1;
-  min-inline-size: 16rem;
-}
-
-.task-title {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.task-description {
-  margin-block: 0.35rem 0;
-  font-size: 0.9rem;
-  color: #55554e;
-}
-
-.task-meta {
-  margin-block: 0.35rem 0;
-  font-size: 0.85rem;
-  color: #55554e;
-}
-
-.task-meta a {
-  color: #1f3d8f;
-}
-
-.task-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.task-actions button {
-  padding-block: 0.3rem;
-  padding-inline: 0.7rem;
-  font-size: 0.9rem;
-}
-
-.task-actions select {
-  font-size: 0.9rem;
-}
-
-.task-form,
-.task-form-row {
-  inline-size: 100%;
-}
-
-.task-form {
-  margin-block: 1rem;
-  padding-block: 1rem;
-  padding-inline: 1rem;
-  border: 1px solid #e4e4e0;
-  border-radius: 4px;
-  background: #fff;
-}
-
-/* Three short fields side by side, stacking when there is no room. */
-.task-form-row-inline {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.task-form-row-inline .field {
-  flex: 1;
-  min-inline-size: 10rem;
-}
-
-/*
- * A checkbox and its label on one line. `width: auto` undoes the full-width
- * rule that every other input in this stylesheet wants.
- */
-.toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-block-end: 0;
-  font-size: 0.9rem;
-}
-
-.toggle input[type="checkbox"] {
-  inline-size: auto;
-  margin: 0;
-}
-
-/* ── Global search ────────────────────────────────────────────────────────── */
+/* ── Global search (in the top bar) ───────────────────────────────────────── */
 
 .global-search {
   position: relative;
   flex: 1;
-  max-inline-size: 26rem;
-  /* Sits between the section links and the identity, taking the slack. */
-  margin-inline-start: 1rem;
+  max-inline-size: 28rem;
 }
 
 .global-search input[type="search"] {
-  padding-block: 0.35rem;
-  font-size: 0.9rem;
+  min-block-size: 2rem;
+  padding-block: 0.25rem;
+  font-size: 0.88rem;
+  background: hsl(var(--background));
+  box-shadow: none;
 }
 
 /*
@@ -784,16 +1327,16 @@ input[type="search"] {
  */
 .search-popover {
   position: absolute;
-  inset-block-start: calc(100% + 0.25rem);
+  inset-block-start: calc(100% + 0.35rem);
   inset-inline-start: 0;
   inline-size: min(34rem, calc(100vw - 2rem));
-  z-index: 10;
+  z-index: 30;
   padding-block: 0.5rem;
   padding-inline: 0.5rem;
-  border: 1px solid #d8d8d2;
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  border: 1px solid hsl(var(--card-border));
+  border-radius: calc(var(--radius) + 4px);
+  background: hsl(var(--card));
+  box-shadow: 0 12px 32px rgb(0 0 0 / 14%);
   max-block-size: 70vh;
   overflow-y: auto;
 }
@@ -805,19 +1348,12 @@ input[type="search"] {
   padding-inline: 0.5rem;
 }
 
-.search-groups {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
 .search-group-label {
   padding-block: 0.6rem 0.25rem;
   padding-inline: 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #55554e;
-  text-transform: none;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
 }
 
 .search-row {
@@ -825,25 +1361,25 @@ input[type="search"] {
   flex-direction: column;
   gap: 0.1rem;
   padding-block: 0.45rem;
-  padding-inline: 0.5rem;
-  border-radius: 4px;
+  padding-inline: 0.6rem;
+  border-radius: var(--radius);
   cursor: pointer;
 }
 
 /* The keyboard highlight and the hover highlight are the same thing. */
 .search-row.active {
-  background: #f0f4fd;
+  background: hsl(var(--muted));
 }
 
 .search-primary {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.5rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .search-secondary {
-  font-size: 0.85rem;
+  font-size: 0.84rem;
 }
 
 /* ── Dashboard ────────────────────────────────────────────────────────────── */
@@ -852,24 +1388,6 @@ input[type="search"] {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
   gap: 1.25rem;
-  margin-block-start: 0.5rem;
-}
-
-.panel {
-  padding-block: 1rem;
-  padding-inline: 1.25rem;
-  border: 1px solid #e4e4e0;
-  border-radius: 6px;
-  background: #fff;
-}
-
-.panel h2 {
-  margin: 0 0 0.75rem;
-  font-size: 1.05rem;
-}
-
-.panel .state {
-  padding-block: 1rem;
 }
 
 .stats {
@@ -888,53 +1406,43 @@ input[type="search"] {
   flex-direction: column;
   flex: 1;
   min-inline-size: 6rem;
-  padding-block: 0.6rem;
-  padding-inline: 0.8rem;
-  border: 1px solid #e4e4e0;
-  border-inline-start: 3px solid #c9c9c4;
-  border-radius: 4px;
+  padding-block: 0.7rem;
+  padding-inline: 0.9rem;
+  border: 1px solid hsl(var(--border));
+  border-inline-start: 3px solid hsl(var(--muted-foreground) / 40%);
+  border-radius: var(--radius);
   color: inherit;
   text-decoration: none;
 }
 
 .stat:hover {
-  background: #f5f5f3;
+  background: hsl(var(--muted) / 60%);
 }
 
 .stat-warn {
-  border-inline-start-color: #a3282a;
+  border-inline-start-color: hsl(var(--destructive));
 }
 
 .stat-value {
-  font-size: 1.6rem;
+  font-size: 1.7rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 
 .stat-label {
-  font-size: 0.85rem;
-  color: #55554e;
-}
-
-.plain-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  font-size: 0.84rem;
+  color: hsl(var(--muted-foreground));
 }
 
 .plain-list > li {
-  padding-block: 0.55rem;
-  border-block-end: 1px solid #f0f0ee;
-  font-size: 0.92rem;
+  padding-block: 0.6rem;
+  border-block-end: 1px solid hsl(var(--border));
+  font-size: 0.9rem;
 }
 
 .plain-list > li:last-child {
   border-block-end: 0;
-}
-
-.plain-list a {
-  color: #1f3d8f;
 }
 
 .upcoming-row,
@@ -949,7 +1457,7 @@ input[type="search"] {
   flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 
 .upcoming-date {
@@ -961,8 +1469,15 @@ input[type="search"] {
   flex: 1;
 }
 
-/* The activity feed and the deadlines run the full width under the stat panels. */
+/*
+ * Two columns once there is room: the stat panels side by side, and the
+ * deadlines and the activity feed each the full width beneath them.
+ */
 @media (min-width: 62rem) {
+  .dashboard {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .panel:has(.plain-list) {
     grid-column: 1 / -1;
   }
@@ -970,56 +1485,35 @@ input[type="search"] {
 
 /* ── Settings ─────────────────────────────────────────────────────────────── */
 
+/* The two settings screens as tabs under the page title. */
 .settings-nav {
   display: flex;
-  gap: 1rem;
+  gap: 0.25rem;
   margin-block-end: 1.25rem;
-  font-size: 0.95rem;
+  border-block-end: 1px solid hsl(var(--border));
+  font-size: 0.92rem;
 }
 
 .settings-nav a {
-  color: #1f3d8f;
+  padding-block: 0.5rem;
+  padding-inline: 0.9rem;
+  margin-block-end: -1px;
+  color: hsl(var(--muted-foreground));
   text-decoration: none;
-  padding-block-end: 0.25rem;
   border-block-end: 2px solid transparent;
 }
 
+.settings-nav a:hover {
+  color: hsl(var(--foreground));
+}
+
 .settings-nav a.current {
-  color: #1a1a18;
-  font-weight: 600;
-  border-block-end-color: #1f3d8f;
+  color: hsl(var(--foreground));
+  font-weight: 500;
+  border-block-end-color: hsl(var(--primary));
 }
 
-.role-list > li,
-.user-list > li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 1rem;
-  padding-block: 0.9rem;
-}
-
-.role-main {
-  flex: 1;
-  min-inline-size: 18rem;
-}
-
-.role-title {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.role-permissions {
-  margin-block: 0.35rem 0;
-  font-size: 0.85rem;
-}
-
-.role-hint {
-  inline-size: 100%;
-}
-
+.role-hint,
 .role-form-row,
 .role-editor {
   inline-size: 100%;
@@ -1027,53 +1521,51 @@ input[type="search"] {
 
 .role-editor h3 {
   margin: 0 0 1rem;
-  font-size: 1.05rem;
 }
 
-.permission-groups {
-  border: 0;
-  padding: 0;
-  margin: 0 0 1rem;
-}
-
-.permission-groups legend {
-  font-size: 0.9rem;
-  margin-block-end: 0.5rem;
-  padding: 0;
-}
-
-/* Resources side by side where there is room, each a column of checkboxes. */
 .permission-groups {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
   gap: 1rem 1.5rem;
+  border: 0;
+  padding: 0;
+  margin: 0 0 0.5rem;
 }
 
 .permission-groups legend {
   grid-column: 1 / -1;
+  padding: 0;
+  margin-block-end: 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 500;
 }
 
 .permission-group h4 {
-  margin: 0 0 0.35rem;
-  font-size: 0.9rem;
-  color: #55554e;
+  margin: 0 0 0.4rem;
+  font-size: 0.84rem;
+  color: hsl(var(--muted-foreground));
 }
 
 .permission-toggle {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: 0.4rem;
-  margin-block-end: 0.3rem;
-  font-size: 0.92rem;
+  gap: 0 0.45rem;
+  margin-block-end: 0.35rem;
+  font-size: 0.9rem;
 }
 
 .permission-toggle input[type="checkbox"] {
   margin-block-start: 0.3rem;
+  flex: 0 0 auto;
 }
 
+/* The reason a box is locked, on its own line under the label, indented past
+   the checkbox so it reads as belonging to that one entry. */
 .permission-toggle .hint {
-  display: block;
+  flex-basis: 100%;
   margin: 0;
+  padding-inline-start: 1.45rem;
 }
 
 .role-checklist {
@@ -1082,10 +1574,81 @@ input[type="search"] {
 
 .archived-roles {
   margin-block-start: 1.5rem;
-  color: #55554e;
+  color: hsl(var(--muted-foreground));
 }
 
 .archived-roles summary {
   cursor: pointer;
   font-size: 0.9rem;
+  margin-block-end: 0.75rem;
+}
+
+/* ── Narrow screens ───────────────────────────────────────────────────────── */
+
+@media (max-width: 48rem) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /*
+   * Off the leading edge until opened. `inset-inline-start` rather than a
+   * translateX: in RTL the sidebar hides off the right, in LTR off the left,
+   * and neither this rule nor the one below has to know which.
+   */
+  .sidebar {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: calc(-1 * var(--sidebar-width) - 1rem);
+    inline-size: var(--sidebar-width);
+    z-index: 40;
+    box-shadow: 0 0 40px rgb(0 0 0 / 30%);
+    transition: inset-inline-start 200ms ease;
+  }
+
+  .sidebar.open {
+    inset-inline-start: 0;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    background: rgb(0 0 0 / 45%);
+  }
+
+  .topbar .menu-button {
+    display: inline-grid;
+  }
+
+  .topbar .brand-name {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .page {
+    padding-block: 1.25rem 3rem;
+    padding-inline: 1rem;
+  }
+
+  /* One column on a narrow screen: a label and its value stacked reads better
+     than a two-column grid squeezed to nothing. */
+  .detail {
+    grid-template-columns: 1fr;
+    gap: 0.15rem 0;
+  }
+
+  .detail dd {
+    margin-block-end: 0.9rem;
+  }
+
+  .filters .button-link {
+    margin-inline-start: 0;
+    inline-size: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
 }

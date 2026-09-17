@@ -31,13 +31,13 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function CaseDetailPage() {
-  const { caseId } = useParams({ from: "/cases/$caseId" });
+  const { caseId } = useParams({ from: "/app/cases/$caseId" });
 
   // The filter and page the reader arrived from, carried in this route's own
   // URL rather than read out of history. That makes the back link work after a
   // reload, and makes a link to this page shareable without losing the context
   // it belongs to.
-  const search = useSearch({ from: "/cases/$caseId" });
+  const search = useSearch({ from: "/app/cases/$caseId" });
 
   const backTo = {
     to: "/cases",
@@ -49,7 +49,7 @@ export function CaseDetailPage() {
   return (
     <main className="wide">
       <p className="back">
-        <Link {...backTo}>← العودة إلى قائمة القضايا</Link>
+        <Link {...backTo}>→ العودة إلى قائمة القضايا</Link>
       </p>
 
       <CaseBody state={query} />
@@ -177,7 +177,7 @@ function CaseDetail({ record }: { record: CaseRow }) {
     <article>
       <header className="page-header">
         <h1>{record.titleAr}</h1>
-        <div className="identity">
+        <div className="page-actions">
           <span
             className="badge"
             style={{ color: status.colour, background: status.background }}

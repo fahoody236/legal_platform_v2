@@ -20,7 +20,7 @@ export interface ClientsSearch {
 }
 
 export function ClientsPage() {
-  const search = useSearch({ from: "/clients" });
+  const search = useSearch({ from: "/app/clients" });
   const navigate = useNavigate();
   const canManage = useHasPermission("clients.manage");
 
@@ -192,7 +192,7 @@ function ClientsBody({
   }
 
   if (rows.length === 0) {
-    return <p className="state">لا يوجد عملاء مطابقون.</p>;
+    return <p className="state empty">لا يوجد عملاء مطابقون.</p>;
   }
 
   return (
