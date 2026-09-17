@@ -12,3 +12,4 @@ export * from "./clients.js";
 export * from "./roles.js";
 export * from "./tasks.js";
 export * from "./search.js";
+export * from "./dashboard.js";

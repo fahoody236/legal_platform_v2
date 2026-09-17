@@ -44,6 +44,9 @@ export function AppHeader({
   return (
     <>
       <nav className="app-nav" aria-label="الأقسام">
+        <Link to="/dashboard" activeProps={{ className: "current" }}>
+          الرئيسية
+        </Link>
         <Link to="/cases" search={{}} activeProps={{ className: "current" }}>
           القضايا
         </Link>

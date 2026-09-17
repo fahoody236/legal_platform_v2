@@ -845,3 +845,125 @@ input[type="search"] {
 .search-secondary {
   font-size: 0.85rem;
 }
+
+/* ── Dashboard ────────────────────────────────────────────────────────────── */
+
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1.25rem;
+  margin-block-start: 0.5rem;
+}
+
+.panel {
+  padding-block: 1rem;
+  padding-inline: 1.25rem;
+  border: 1px solid #e4e4e0;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.panel .state {
+  padding-block: 1rem;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/*
+ * A number and its label, as a link to the rows it counts. The accent is on
+ * the leading edge so the case-status colours read as a tab on the right in
+ * Arabic and on the left in English, unchanged.
+ */
+.stat {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-inline-size: 6rem;
+  padding-block: 0.6rem;
+  padding-inline: 0.8rem;
+  border: 1px solid #e4e4e0;
+  border-inline-start: 3px solid #c9c9c4;
+  border-radius: 4px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.stat:hover {
+  background: #f5f5f3;
+}
+
+.stat-warn {
+  border-inline-start-color: #a3282a;
+}
+
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #55554e;
+}
+
+.plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.plain-list > li {
+  padding-block: 0.55rem;
+  border-block-end: 1px solid #f0f0ee;
+  font-size: 0.92rem;
+}
+
+.plain-list > li:last-child {
+  border-block-end: 0;
+}
+
+.plain-list a {
+  color: #1f3d8f;
+}
+
+.upcoming-row,
+.activity-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.upcoming-date,
+.activity-when {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+.upcoming-date {
+  font-weight: 600;
+}
+
+.upcoming-body,
+.activity-body {
+  flex: 1;
+}
+
+/* The activity feed and the deadlines run the full width under the stat panels. */
+@media (min-width: 62rem) {
+  .panel:has(.plain-list) {
+    grid-column: 1 / -1;
+  }
+}

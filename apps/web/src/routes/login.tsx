@@ -30,19 +30,24 @@ export function LoginPage() {
     setStatus("submitting");
 
     try {
-      const body = await apiFetch<{ user: SessionUser }>("/api/auth/login", {
+      await apiFetch<{ user: SessionUser }>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
 
       setPassword("");
 
-      // Seeded rather than invalidated: the sign-in response already carries the
-      // user, so refetching /auth/me would be a second round trip for an answer
-      // just received. The cookie is set by then, so a later refetch still works.
-      queryClient.setQueryData(SESSION_QUERY_KEY, body.user);
+      // Dropped rather than seeded. An earlier version wrote `body.user` into
+      // the session cache to save a round trip, and that broke the moment the
+      // session grew a `permissions` field the sign-in response does not carry:
+      // every screen read `permissions` off a plain user and crashed into the
+      // route error page — and only through this form, which the browser tests
+      // bypassed by signing in with fetch. Removing the entry means the next
+      // screen fetches /auth/me and gets the real shape. One round trip, and
+      // the two responses can never disagree again.
+      queryClient.removeQueries({ queryKey: SESSION_QUERY_KEY });
 
-      await navigate({ to: "/cases" });
+      await navigate({ to: "/dashboard" });
     } catch {
       // A network failure is reported the same way as a rejected credential.
       setStatus("error");

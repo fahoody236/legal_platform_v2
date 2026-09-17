@@ -20,6 +20,7 @@ import { CaseNewPage } from "./routes/case-new.js";
 import { ClientDetailPage } from "./routes/client-detail.js";
 import { ClientNewPage } from "./routes/client-new.js";
 import { ClientsPage } from "./routes/clients.js";
+import { DashboardPage } from "./routes/dashboard.js";
 import { TasksPage } from "./routes/tasks.js";
 import { CasesPage } from "./routes/cases.js";
 import { LoginPage } from "./routes/login.js";
@@ -97,7 +98,7 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   beforeLoad: () => {
-    throw redirect({ to: "/cases" });
+    throw redirect({ to: "/dashboard" });
   },
 });
 
@@ -255,9 +256,18 @@ const tasksRoute = createRoute({
   errorComponent: RouteError,
 });
 
+const dashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/dashboard",
+  beforeLoad: requireSession,
+  component: DashboardPage,
+  errorComponent: RouteError,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
+  dashboardRoute,
   casesRoute,
   caseNewRoute,
   caseDetailRoute,
