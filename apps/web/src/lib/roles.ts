@@ -137,6 +137,20 @@ export function useArchiveRole(roleId: string) {
   );
 }
 
+/**
+ * The same request with the user chosen at call time, for the one place that
+ * does not know the id until a moment before — the new-user form, which
+ * assigns roles to the person it has just created.
+ */
+export function useSetRolesOfUser() {
+  return useRoleMutation(({ userId, roleIds }: { userId: string; roleIds: string[] }) =>
+    apiFetch<{ removed: string[]; added: string[] }>(
+      `/api/users/${encodeURIComponent(userId)}/roles`,
+      { method: "PATCH", body: JSON.stringify({ roleIds }) },
+    ),
+  );
+}
+
 export function useSetUserRoles(userId: string) {
   return useRoleMutation((roleIds: string[]) =>
     apiFetch<{ removed: string[]; added: string[] }>(

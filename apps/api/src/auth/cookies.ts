@@ -164,6 +164,22 @@ function secureAttributeApplies(request: CookieRequest): boolean {
   return !isLoopbackHostname(hostname.toLowerCase());
 }
 
+/**
+ * The origin the client reached us at, for building a link back to it — the
+ * invitation link, which must open on the same firm subdomain it was issued
+ * from, since the token is only visible in that tenant's context.
+ *
+ * Built from the same evidence as the cookie decision above and nothing else:
+ * the Host header, which this application already trusts to identify the
+ * tenant, and the socket. `https` unless the request is plaintext to a
+ * loopback name, which is the one case where an https link could not be
+ * followed. Not `X-Forwarded-Proto`, for the reason given above.
+ */
+export function requestOrigin(request: CookieRequest): string {
+  const scheme = secureAttributeApplies(request) ? "https" : "http";
+  return `${scheme}://${request.headers.host ?? "localhost"}`;
+}
+
 export function readSessionCookie(
   cookieHeader: string | undefined,
 ): string | undefined {

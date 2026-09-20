@@ -11,7 +11,9 @@ export const IS_PUBLIC = "auth:public";
  * Every use is a deliberate statement that this route exposes nothing tenant-
  * specific.
  *
- * There are exactly two in the application: sign-in, which cannot require a
- * session in order to create one, and liveness, which touches no data.
+ * Four in the application: sign-in, which cannot require a session in order
+ * to create one; liveness, which touches no data; and the two invitation
+ * routes, where the token is the credential and a session is what accepting
+ * it makes possible.
  */
 export const Public = () => SetMetadata(IS_PUBLIC, true);

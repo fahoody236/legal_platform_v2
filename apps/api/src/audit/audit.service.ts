@@ -33,7 +33,14 @@ export type AuditAction =
   | "roles.created"
   | "roles.updated"
   | "roles.archived"
-  | "users.roles_changed";
+  | "users.roles_changed"
+  | "users.created"
+  | "users.updated"
+  | "users.disabled"
+  | "users.enabled"
+  | "invitations.created"
+  | "invitations.resent"
+  | "invitations.accepted";
 
 export interface AuditEvent {
   action: AuditAction;

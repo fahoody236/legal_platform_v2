@@ -104,3 +104,22 @@ export async function touchSession(
     .set({ lastSeenAt: sql`now()` })
     .where(eq(sessions.id, sessionId));
 }
+
+/**
+ * Ends every open session a user has. Called when the user is disabled, so
+ * revoking access takes effect on their next request rather than at their
+ * next sign-in — which for someone who stays signed in is never.
+ * Returns how many were ended, for the audit entry.
+ */
+export async function revokeAllSessionsForUser(
+  tx: TenantTransaction,
+  userId: string,
+): Promise<number> {
+  const rows = await tx
+    .update(sessions)
+    .set({ revokedAt: sql`now()` })
+    .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)))
+    .returning({ id: sessions.id });
+
+  return rows.length;
+}

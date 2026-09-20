@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type Database } from "./client.js";
-import { firms, users } from "./schema/index.js";
+import { firms, invitations, users } from "./schema/index.js";
 import { withTenant } from "./tenant-context.js";
 
 /**
@@ -97,9 +97,16 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Ordered by the foreign key: users reference firms.
-  await privileged.db.delete(users).where(inArray(users.firmId, [firmA.id, firmB.id]));
-  await privileged.db.delete(firms).where(inArray(firms.id, [firmA.id, firmB.id]));
+  // Ordered by the foreign keys: invitations reference users, users firms.
+  await privileged.db
+    .delete(invitations)
+    .where(inArray(invitations.firmId, [firmA.id, firmB.id]));
+  await privileged.db
+    .delete(users)
+    .where(inArray(users.firmId, [firmA.id, firmB.id]));
+  await privileged.db
+    .delete(firms)
+    .where(inArray(firms.id, [firmA.id, firmB.id]));
 
   await Promise.all([privileged.pool.end(), app.pool.end()]);
 });
@@ -222,6 +229,47 @@ describe("tenant isolation", () => {
       tx.select().from(users),
     );
     expect(rows).toHaveLength(1);
+  });
+
+  /**
+   * An invitation token is the power to set a person's password, and the
+   * acceptance route is public — so this is the one table where a cross-tenant
+   * read would hand over an account rather than a record. Firm A's invitation,
+   * looked up by its hash under firm B's context, must not exist.
+   */
+  it("keeps one firm's invitation invisible under another firm's context", async () => {
+    const tokenHash = `test-${randomUUID()}`;
+
+    await withTenant(appDb, firmA.id, async (tx) =>
+      tx.insert(invitations).values({
+        firmId: firmA.id,
+        userId: userA.id,
+        invitedByUserId: userA.id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + 60_000),
+      }),
+    );
+
+    const fromB = await withTenant(appDb, firmB.id, async (tx) =>
+      tx.select().from(invitations).where(eq(invitations.tokenHash, tokenHash)),
+    );
+    expect(fromB).toHaveLength(0);
+
+    const withoutContext = await appDb
+      .select()
+      .from(invitations)
+      .where(eq(invitations.tokenHash, tokenHash));
+    expect(withoutContext).toHaveLength(0);
+
+    const fromA = await withTenant(appDb, firmA.id, async (tx) =>
+      tx.select().from(invitations).where(eq(invitations.tokenHash, tokenHash)),
+    );
+    expect(fromA).toHaveLength(1);
+
+    const deletion = withTenant(appDb, firmA.id, async (tx) =>
+      tx.delete(invitations).where(eq(invitations.tokenHash, tokenHash)),
+    );
+    await expect(deletion).rejects.toThrow();
   });
 });
 

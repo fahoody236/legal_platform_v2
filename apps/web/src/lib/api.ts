@@ -48,6 +48,13 @@ export async function apiFetch<T>(
     throw new ApiError(response.status, await errorCode(response));
   }
 
+  // A 204 has no body to parse. Sign-out and accepting an invitation answer
+  // that way; without this line the first was "succeeding" by throwing into
+  // a catch block that ignored it.
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return (await response.json()) as T;
 }
 

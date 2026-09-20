@@ -22,6 +22,7 @@ import { ClientDetailPage } from "./routes/client-detail.js";
 import { ClientNewPage } from "./routes/client-new.js";
 import { ClientsPage } from "./routes/clients.js";
 import { DashboardPage } from "./routes/dashboard.js";
+import { InviteAcceptPage } from "./routes/invite-accept.js";
 import { TasksPage } from "./routes/tasks.js";
 import { CasesPage } from "./routes/cases.js";
 import { LoginPage } from "./routes/login.js";
@@ -131,6 +132,18 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
   component: LoginPage,
+});
+
+/**
+ * Where an invitation link lands. Outside the signed-in layout like sign-in:
+ * the person has no session, and the token in the path is what stands in for
+ * one. Nothing is validated here — the screen asks the API, which answers
+ * 404 for a dead link, and there is no shape a token could fail beyond that.
+ */
+const inviteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/invite/$token",
+  component: InviteAcceptPage,
 });
 
 const casesRoute = createRoute({
@@ -298,6 +311,7 @@ const settingsUsersRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
+  inviteRoute,
   appRoute.addChildren([
     dashboardRoute,
     casesRoute,

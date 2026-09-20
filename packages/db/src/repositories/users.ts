@@ -118,3 +118,63 @@ export async function createUser(
 
   return user;
 }
+
+/**
+ * Changes a user's names. Email is not here on purpose: it is the sign-in
+ * identifier, and changing it under someone is a different action with
+ * different consequences (their invitation, their credential lookup) that no
+ * screen asks for yet.
+ */
+export async function updateUser(
+  tx: TenantTransaction,
+  id: string,
+  input: { fullName?: string | undefined; fullNameAr?: string | undefined },
+): Promise<User | undefined> {
+  const [user] = await tx
+    .update(users)
+    .set({
+      ...(input.fullName === undefined ? {} : { fullName: input.fullName }),
+      ...(input.fullNameAr === undefined ? {} : { fullNameAr: input.fullNameAr }),
+    })
+    .where(eq(users.id, id))
+    .returning();
+
+  return user;
+}
+
+/**
+ * Revokes access. `coalesce`, so disabling twice keeps the first timestamp —
+ * the date someone left is a fact, not the date someone last pressed the
+ * button. The last-administrator trigger (0015) fires on this column and
+ * refuses the commit if the firm would be left without one.
+ */
+export async function disableUser(
+  tx: TenantTransaction,
+  id: string,
+): Promise<User | undefined> {
+  const [user] = await tx
+    .update(users)
+    .set({ disabledAt: sql`coalesce(${users.disabledAt}, now())` })
+    .where(eq(users.id, id))
+    .returning();
+
+  return user;
+}
+
+/**
+ * Restores access. Their roles were never removed, so what they could do
+ * before is what they can do again — an administrator who wants otherwise
+ * changes the roles, which is a separate, audited decision.
+ */
+export async function enableUser(
+  tx: TenantTransaction,
+  id: string,
+): Promise<User | undefined> {
+  const [user] = await tx
+    .update(users)
+    .set({ disabledAt: null })
+    .where(eq(users.id, id))
+    .returning();
+
+  return user;
+}

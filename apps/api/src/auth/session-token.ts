@@ -15,10 +15,23 @@ export interface IssuedToken {
 }
 
 export function issueSessionToken(): IssuedToken {
-  const token = randomBytes(TOKEN_BYTES).toString("base64url");
-  return { token, tokenHash: hashSessionToken(token) };
+  return issueOpaqueToken();
 }
 
 export function hashSessionToken(token: string): string {
+  return hashOpaqueToken(token);
+}
+
+/**
+ * The same construction for any bearer secret that is long, random and
+ * stored only as a digest — sessions, and now invitations. One place, so the
+ * two cannot drift to different lengths or different hashes.
+ */
+export function issueOpaqueToken(): IssuedToken {
+  const token = randomBytes(TOKEN_BYTES).toString("base64url");
+  return { token, tokenHash: hashOpaqueToken(token) };
+}
+
+export function hashOpaqueToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
