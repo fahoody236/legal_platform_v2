@@ -2,7 +2,10 @@ import { Controller, Get, Req } from "@nestjs/common";
 import type { AuthenticatedRequest } from "../auth/authenticated-request.js";
 import { actorOf } from "../common/request-context.js";
 import { SessionOnly } from "../permissions/session-only.decorator.js";
-import { DashboardService, type DashboardResponse } from "./dashboard.service.js";
+import {
+  DashboardService,
+  type DashboardResponse,
+} from "./dashboard.service.js";
 
 @Controller("dashboard")
 export class DashboardController {

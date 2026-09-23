@@ -1,6 +1,7 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { apiFetch } from "./api.js";
 import type { CaseStatus } from "./cases.js";
+import type { HearingType } from "./hearings.js";
 
 export interface DashboardActivity {
   id: string;
@@ -33,6 +34,20 @@ export interface DashboardResponse {
       dueAt: string;
       taskTitleAr: string;
       taskAssignedToName: string | null;
+    }>;
+  };
+  hearings?: {
+    windowDays: number;
+    items: Array<{
+      id: string;
+      caseId: string;
+      caseNumber: string;
+      caseTitleAr: string;
+      scheduledAt: string;
+      hearingType: HearingType;
+      court: string | null;
+      circuit: string | null;
+      assignedLawyerName: string | null;
     }>;
   };
   activity?: { items: DashboardActivity[] };

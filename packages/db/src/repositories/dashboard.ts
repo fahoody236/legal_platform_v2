@@ -3,6 +3,7 @@ import { auditLog } from "../schema/audit_log.js";
 import { cases } from "../schema/cases.js";
 import { clientRepresentatives } from "../schema/client_representatives.js";
 import { clients } from "../schema/clients.js";
+import { hearings } from "../schema/hearings.js";
 import { tasks } from "../schema/tasks.js";
 import { users } from "../schema/users.js";
 import type { TenantTransaction } from "../tenant-context.js";
@@ -65,8 +66,14 @@ export async function summariseMyTasks(
   const [row] = await tx
     .select({
       open: sql<number>`count(*) filter (where ${live})`.mapWith(Number),
-      overdue: sql<number>`count(*) filter (where ${live} and ${tasks.dueAt} < now())`.mapWith(Number),
-      dueSoon: sql<number>`count(*) filter (where ${live} and ${tasks.dueAt} >= now() and ${tasks.dueAt} < now() + ${window})`.mapWith(Number),
+      overdue:
+        sql<number>`count(*) filter (where ${live} and ${tasks.dueAt} < now())`.mapWith(
+          Number,
+        ),
+      dueSoon:
+        sql<number>`count(*) filter (where ${live} and ${tasks.dueAt} >= now() and ${tasks.dueAt} < now() + ${window})`.mapWith(
+          Number,
+        ),
     })
     .from(tasks)
     .where(eq(tasks.assignedToUserId, userId));
@@ -89,9 +96,11 @@ export interface UpcomingDeadline {
  * Cases with a live task due inside the window, one row per case, carrying the
  * soonest task.
  *
- * "Deadline" here means a task's due date. Cases have no hearing or deadline
- * column of their own; a matter's deadlines are the dated work on it. If
- * hearings are ever modelled as their own thing, this is where they join in.
+ * "Deadline" here means a task's due date, and only that. Hearings are their
+ * own table since 0017 and have their own dashboard section — deliberately
+ * not merged into this one: a court date and a piece of dated work are
+ * different obligations, and a single list would make them look
+ * interchangeable when only one of them means being somewhere in person.
  *
  * `DISTINCT ON (case_id)` with the order below picks the soonest task per case
  * in one pass, which is what makes this one query rather than a query per case.
@@ -149,10 +158,7 @@ export async function listUpcomingDeadlines(
 }
 
 export type ActivityResourceType =
-  | "case"
-  | "client"
-  | "task"
-  | "client_representative";
+  "case" | "client" | "task" | "hearing" | "client_representative";
 
 export interface ActivityEntry {
   id: string;
@@ -172,6 +178,8 @@ export interface ActivityEntry {
   clientId: string | null;
   clientNameAr: string | null;
   taskTitleAr: string | null;
+  hearingScheduledAt: Date | null;
+  hearingType: string | null;
   representativeNameAr: string | null;
 }
 
@@ -179,8 +187,8 @@ export interface ActivityEntry {
  * The most recent entries about the given resource types, with the actor and
  * the resource resolved in the same query.
  *
- * Four left joins on `resource_type = '…' and id = resource_id`, one per kind of
- * record the feed can describe. Each is a left join because a record's label
+ * Five left joins on `resource_type = '…' and id = resource_id`, one per kind
+ * of record the feed can describe. Each is a left join because a record's label
  * is a courtesy, not a requirement: the entry is the fact, and it renders even
  * if — against the schema's design — the record it names were gone.
  *
@@ -203,24 +211,38 @@ export async function listRecentActivity(
       action: auditLog.action,
       occurredAt: auditLog.createdAt,
       actorUserId: auditLog.actorUserId,
-      actorName: sql<string | null>`coalesce(${users.fullNameAr}, ${users.fullName})`,
-      actorDisabled: sql<boolean>`${users.disabledAt} is not null`.mapWith(Boolean),
+      actorName: sql<
+        string | null
+      >`coalesce(${users.fullNameAr}, ${users.fullName})`,
+      actorDisabled: sql<boolean>`${users.disabledAt} is not null`.mapWith(
+        Boolean,
+      ),
       resourceType: auditLog.resourceType,
       resourceId: auditLog.resourceId,
       detail: auditLog.detail,
-      // A task entry links to its case; a representative entry to its client.
-      caseId: sql<string | null>`coalesce(${cases.id}, ${tasks.caseId})`,
+      // A task or hearing entry links to its case; a representative entry to
+      // its client.
+      caseId: sql<
+        string | null
+      >`coalesce(${cases.id}, ${tasks.caseId}, ${hearings.caseId})`,
       caseNumber: cases.caseNumber,
       caseTitleAr: cases.titleAr,
-      clientId: sql<string | null>`coalesce(${clients.id}, ${clientRepresentatives.clientId})`,
+      clientId: sql<
+        string | null
+      >`coalesce(${clients.id}, ${clientRepresentatives.clientId})`,
       clientNameAr: clients.nameAr,
       taskTitleAr: tasks.titleAr,
+      hearingScheduledAt: hearings.scheduledAt,
+      hearingType: hearings.hearingType,
       representativeNameAr: clientRepresentatives.nameAr,
     })
     .from(auditLog)
     .leftJoin(
       users,
-      and(eq(users.firmId, auditLog.firmId), eq(users.id, auditLog.actorUserId)),
+      and(
+        eq(users.firmId, auditLog.firmId),
+        eq(users.id, auditLog.actorUserId),
+      ),
     )
     .leftJoin(
       cases,
@@ -244,6 +266,14 @@ export async function listRecentActivity(
         eq(auditLog.resourceType, "task"),
         eq(tasks.firmId, auditLog.firmId),
         eq(tasks.id, auditLog.resourceId),
+      ),
+    )
+    .leftJoin(
+      hearings,
+      and(
+        eq(auditLog.resourceType, "hearing"),
+        eq(hearings.firmId, auditLog.firmId),
+        eq(hearings.id, auditLog.resourceId),
       ),
     )
     .leftJoin(

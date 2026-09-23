@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { isNetworkError } from "../lib/api.js";
 import { CASE_STATUSES, STATUS_LABELS } from "../lib/cases.js";
 import { useDashboard, type DashboardResponse } from "../lib/dashboard.js";
+import { HEARING_TYPE_LABELS } from "../lib/hearings.js";
 import { formatDate, formatDateTime } from "../lib/dates.js";
 import { AppHeader } from "./app-header.js";
 
@@ -33,7 +34,11 @@ export function DashboardPage() {
 
 function Sections({ data }: { data: DashboardResponse }) {
   const nothing =
-    !data.cases && !data.myTasks && !data.upcoming && !data.activity;
+    !data.cases &&
+    !data.myTasks &&
+    !data.upcoming &&
+    !data.hearings &&
+    !data.activity;
 
   if (nothing) {
     // Every section absent means every permission absent. Say so, rather than
@@ -49,6 +54,9 @@ function Sections({ data }: { data: DashboardResponse }) {
     <div className="dashboard">
       {data.myTasks && <MyTasks data={data.myTasks} />}
       {data.cases && <CaseCounts data={data.cases} />}
+      {/* Hearings above task deadlines: being in court on a given morning is
+          the harder commitment of the two. */}
+      {data.hearings && <Hearings data={data.hearings} />}
       {data.upcoming && <Upcoming data={data.upcoming} />}
       {data.activity && <Activity data={data.activity} />}
     </div>
@@ -60,7 +68,11 @@ function Sections({ data }: { data: DashboardResponse }) {
  * tasks it counts. A number that cannot be clicked through to its rows is a
  * number nobody can check.
  */
-function MyTasks({ data }: { data: NonNullable<DashboardResponse["myTasks"]> }) {
+function MyTasks({
+  data,
+}: {
+  data: NonNullable<DashboardResponse["myTasks"]>;
+}) {
   return (
     <section className="panel">
       <h2>مهامي</h2>
@@ -79,16 +91,18 @@ function MyTasks({ data }: { data: NonNullable<DashboardResponse["myTasks"]> }) 
         </Link>
         <Link to="/tasks" search={{ mine: true }} className="stat">
           <span className="stat-value">{data.dueSoon}</span>
-          <span className="stat-label">
-            تستحق خلال {data.dueSoonDays} أيام
-          </span>
+          <span className="stat-label">تستحق خلال {data.dueSoonDays} أيام</span>
         </Link>
       </div>
     </section>
   );
 }
 
-function CaseCounts({ data }: { data: NonNullable<DashboardResponse["cases"]> }) {
+function CaseCounts({
+  data,
+}: {
+  data: NonNullable<DashboardResponse["cases"]>;
+}) {
   return (
     <section className="panel">
       <h2>
@@ -116,16 +130,81 @@ function CaseCounts({ data }: { data: NonNullable<DashboardResponse["cases"]> })
   );
 }
 
-function Upcoming({ data }: { data: NonNullable<DashboardResponse["upcoming"]> }) {
+/**
+ * The next court dates, as a list.
+ *
+ * A list rather than a calendar, deliberately: the question this answers is
+ * "what is next and am I ready", which reads top to bottom. A calendar is a
+ * different product decision — it needs a month grid, a week view, and an
+ * answer for hearings with no date — and is not made here.
+ */
+function Hearings({
+  data,
+}: {
+  data: NonNullable<DashboardResponse["hearings"]>;
+}) {
   return (
     <section className="panel">
       <h2>
-        مواعيد قادمة{" "}
+        الجلسات القادمة{" "}
         <span className="muted">— خلال {data.windowDays} يوماً</span>
       </h2>
 
       {data.items.length === 0 ? (
-        <p className="state">لا توجد مواعيد خلال الفترة القادمة.</p>
+        <p className="state">لا توجد جلسات خلال الفترة القادمة.</p>
+      ) : (
+        <ul className="plain-list">
+          {data.items.map((item) => (
+            <li key={item.id} className="upcoming-row">
+              <span className="upcoming-date">
+                {formatDateTime(item.scheduledAt)}
+              </span>
+              <span className="upcoming-body">
+                <Link
+                  to="/cases/$caseId"
+                  params={{ caseId: item.caseId }}
+                  search={{}}
+                >
+                  <span dir="ltr" className="case-number">
+                    {item.caseNumber}
+                  </span>
+                  {" — "}
+                  {item.caseTitleAr}
+                </Link>
+                <span className="muted">
+                  {" · "}
+                  {HEARING_TYPE_LABELS[item.hearingType]}
+                  {item.court && ` · ${item.court}`}
+                  {item.circuit && ` · الدائرة ${item.circuit}`}
+                  {/* The case's lawyer attends: a hearing has no attendee of
+                      its own, by design. */}
+                  {item.assignedLawyerName && ` · ${item.assignedLawyerName}`}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function Upcoming({
+  data,
+}: {
+  data: NonNullable<DashboardResponse["upcoming"]>;
+}) {
+  return (
+    <section className="panel">
+      <h2>
+        {/* Renamed now that hearings exist: "مواعيد" reads as court dates, and
+            this panel is about dated work, not appearances. */}
+        مهام قريبة الاستحقاق{" "}
+        <span className="muted">— خلال {data.windowDays} يوماً</span>
+      </h2>
+
+      {data.items.length === 0 ? (
+        <p className="state">لا توجد مهام مستحقة خلال الفترة القادمة.</p>
       ) : (
         <ul className="plain-list">
           {data.items.map((item) => (
@@ -162,7 +241,11 @@ function Upcoming({ data }: { data: NonNullable<DashboardResponse["upcoming"]> }
  * no subject, so it does not have to agree with anyone — see the API's
  * activity-text.ts for why that matters in Arabic.
  */
-function Activity({ data }: { data: NonNullable<DashboardResponse["activity"]> }) {
+function Activity({
+  data,
+}: {
+  data: NonNullable<DashboardResponse["activity"]>;
+}) {
   return (
     <section className="panel">
       <h2>آخر النشاط</h2>

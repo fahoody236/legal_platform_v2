@@ -9,4 +9,5 @@ export * from "./clients.js";
 export * from "./client_representatives.js";
 export * from "./cases.js";
 export * from "./tasks.js";
+export * from "./hearings.js";
 export * from "./invitations.js";

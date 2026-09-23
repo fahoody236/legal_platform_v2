@@ -4,11 +4,13 @@ import {
   listEffectivePermissions,
   listRecentActivity,
   listUpcomingDeadlines,
+  listUpcomingHearings,
   summariseMyTasks,
   withTenant,
   type ActivityResourceType,
   type CaseStatus,
   type Database,
+  type HearingType,
   type MyTaskSummary,
 } from "@legal/db";
 import type { Actor } from "../common/request-context.js";
@@ -18,6 +20,8 @@ import { activityText } from "./activity-text.js";
 const DUE_SOON_DAYS = 7;
 const DEADLINE_WINDOW_DAYS = 14;
 const DEADLINE_LIMIT = 10;
+const HEARING_WINDOW_DAYS = 14;
+const HEARING_LIMIT = 10;
 const ACTIVITY_LIMIT = 10;
 
 export interface DashboardActivity {
@@ -28,10 +32,7 @@ export interface DashboardActivity {
   action: string;
   actor: { name: string; disabled: boolean } | null;
   /** Where the entry leads, when its record has a page. */
-  link:
-    | { type: "case"; id: string }
-    | { type: "client"; id: string }
-    | null;
+  link: { type: "case"; id: string } | { type: "client"; id: string } | null;
 }
 
 export interface DashboardResponse {
@@ -52,6 +53,25 @@ export interface DashboardResponse {
       taskAssignedToName: string | null;
     }>;
   };
+  /**
+   * Court dates, kept separate from `upcoming` rather than merged into it. A
+   * hearing means being somewhere in person on a given morning; a task due
+   * date means work owed. One list would make them look interchangeable.
+   */
+  hearings?: {
+    windowDays: number;
+    items: Array<{
+      id: string;
+      caseId: string;
+      caseNumber: string;
+      caseTitleAr: string;
+      scheduledAt: string;
+      hearingType: HearingType;
+      court: string | null;
+      circuit: string | null;
+      assignedLawyerName: string | null;
+    }>;
+  };
   activity?: { items: DashboardActivity[] };
 }
 
@@ -60,7 +80,7 @@ export class DashboardService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   /**
-   * One transaction, four reads at most, each behind the same permission that
+   * One transaction, five reads at most, each behind the same permission that
    * gates the list it summarises. A section the caller may not see is not
    * queried at all — its count never leaves the database.
    *
@@ -76,6 +96,7 @@ export class DashboardService {
       const canSeeCases = permissions.has("cases.view");
       const canSeeTasks = permissions.has("tasks.view");
       const canSeeClients = permissions.has("clients.view");
+      const canSeeHearings = permissions.has("hearings.view");
 
       const response: DashboardResponse = {};
 
@@ -116,13 +137,43 @@ export class DashboardService {
         };
       }
 
+      // Both permissions, for the same reason deadlines need both: without
+      // cases.view the matter is not the reader's to see, and without
+      // hearings.view neither are its court dates.
+      if (canSeeCases && canSeeHearings) {
+        const items = await listUpcomingHearings(
+          tx,
+          HEARING_WINDOW_DAYS,
+          HEARING_LIMIT,
+        );
+        response.hearings = {
+          windowDays: HEARING_WINDOW_DAYS,
+          items: items.map((item) => ({
+            id: item.id,
+            caseId: item.caseId,
+            caseNumber: item.caseNumber,
+            caseTitleAr: item.caseTitleAr,
+            scheduledAt: item.scheduledAt.toISOString(),
+            hearingType: item.hearingType,
+            court: item.court,
+            circuit: item.circuit,
+            assignedLawyerName: item.assignedLawyerName,
+          })),
+        };
+      }
+
       const visibleTypes: ActivityResourceType[] = [];
       if (canSeeCases) visibleTypes.push("case");
       if (canSeeClients) visibleTypes.push("client", "client_representative");
       if (canSeeTasks) visibleTypes.push("task");
+      if (canSeeHearings) visibleTypes.push("hearing");
 
       if (visibleTypes.length > 0) {
-        const entries = await listRecentActivity(tx, visibleTypes, ACTIVITY_LIMIT);
+        const entries = await listRecentActivity(
+          tx,
+          visibleTypes,
+          ACTIVITY_LIMIT,
+        );
 
         response.activity = {
           items: entries.map((entry) => ({
@@ -154,9 +205,11 @@ export class DashboardService {
  *     names as out of scope. Rendered as "مستخدم غير معروف" so the entry still
  *     reads, and so the anomaly is visible rather than silent.
  */
-function resolveActor(
-  entry: { actorUserId: string | null; actorName: string | null; actorDisabled: boolean },
-): DashboardActivity["actor"] {
+function resolveActor(entry: {
+  actorUserId: string | null;
+  actorName: string | null;
+  actorDisabled: boolean;
+}): DashboardActivity["actor"] {
   if (entry.actorUserId === null) return null;
 
   return {
@@ -170,13 +223,21 @@ function resolveLink(entry: {
   caseId: string | null;
   clientId: string | null;
 }): DashboardActivity["link"] {
-  // Tasks live on their case's page; representatives on their client's.
-  if ((entry.resourceType === "case" || entry.resourceType === "task") && entry.caseId) {
+  // Tasks and hearings live on their case's page; representatives on their
+  // client's. Neither has a page of its own, and neither should: both are
+  // sections of the matter they belong to.
+  if (
+    (entry.resourceType === "case" ||
+      entry.resourceType === "task" ||
+      entry.resourceType === "hearing") &&
+    entry.caseId
+  ) {
     return { type: "case", id: entry.caseId };
   }
 
   if (
-    (entry.resourceType === "client" || entry.resourceType === "client_representative") &&
+    (entry.resourceType === "client" ||
+      entry.resourceType === "client_representative") &&
     entry.clientId
   ) {
     return { type: "client", id: entry.clientId };

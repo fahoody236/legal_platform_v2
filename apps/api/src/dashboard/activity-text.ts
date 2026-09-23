@@ -38,6 +38,38 @@ function caseLabel(entry: ActivityEntry): string | null {
     : entry.caseNumber;
 }
 
+/**
+ * Gregorian, Latin digits, Arabic month names — the same choices the
+ * interface's dates.ts makes and for the same reasons: `ar-SA` alone selects
+ * the Umm al-Qura calendar, which would render a court date roughly 579 years
+ * out while looking entirely plausible.
+ *
+ * Formatted here rather than in the browser because this string is a rendered
+ * sentence by the time it leaves the API; the alternative is a template the
+ * interface has to reassemble.
+ */
+const hearingDate = new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+
+const HEARING_TYPE_LABELS: Record<string, string> = {
+  pleading: "المرافعة",
+  judgment: "النطق بالحكم",
+  appeal: "الاستئناف",
+  expert: "الخبرة",
+  other: "الجلسة",
+};
+
+/** "جلسة المرافعة — 12 مارس 2026", or null if the row did not resolve. */
+function hearingLabel(entry: ActivityEntry): string | null {
+  if (!entry.hearingScheduledAt) return null;
+
+  const type = HEARING_TYPE_LABELS[entry.hearingType ?? "other"] ?? "الجلسة";
+  return `جلسة ${type} — ${hearingDate.format(entry.hearingScheduledAt)}`;
+}
+
 function detailField(entry: ActivityEntry, key: string): unknown {
   const detail = entry.detail;
   if (typeof detail !== "object" || detail === null) return undefined;
@@ -70,6 +102,24 @@ const TEMPLATES: Record<string, (entry: ActivityEntry) => string> = {
       ? withLabel("إلغاء إسناد المهمة", e.taskTitleAr)
       : withLabel("إسناد المهمة", e.taskTitleAr),
   "tasks.completed": (e) => withLabel("إنجاز المهمة", e.taskTitleAr),
+
+  "hearings.created": (e) => withLabel("جدولة", hearingLabel(e)),
+  "hearings.updated": (e) => withLabel("تعديل", hearingLabel(e)),
+  // The status is in the sentence because "the court sat" and "it was called
+  // off" are different events, and a reader scanning the feed should not have
+  // to open the record to tell them apart.
+  "hearings.status_changed": (e) => {
+    const to = detailField(e, "to");
+    const verb =
+      to === "held" ? "انعقاد" : to === "cancelled" ? "إلغاء" : "إعادة جدولة";
+    return withLabel(verb, hearingLabel(e));
+  },
+  // Says whether a new date was set, because "adjourned to the 20th" and
+  // "adjourned with no date" are the two outcomes a firm needs to tell apart.
+  "hearings.adjourned": (e) =>
+    detailField(e, "nextHearingId") === null
+      ? `${withLabel("تأجيل", hearingLabel(e))} (بلا تحديد موعد)`
+      : withLabel("تأجيل", hearingLabel(e)),
 };
 
 export function activityText(entry: ActivityEntry): string {

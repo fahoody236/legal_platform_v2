@@ -10,6 +10,7 @@ import {
 import { formatDate, formatDateTime } from "../lib/dates.js";
 import { useHasPermission } from "../lib/session.js";
 import { CaseAssignment } from "./case-assignment.js";
+import { CaseHearings } from "./case-hearings.js";
 import { CaseTasks } from "./case-tasks.js";
 import { CaseForm, toCaseBody, type CaseFormValues } from "./case-form.js";
 
@@ -57,11 +58,7 @@ export function CaseDetailPage() {
   );
 }
 
-function CaseBody({
-  state,
-}: {
-  state: ReturnType<typeof useCase>;
-}) {
+function CaseBody({ state }: { state: ReturnType<typeof useCase> }) {
   if (state.isPending) {
     return (
       <p className="state" role="status" aria-live="polite">
@@ -242,6 +239,10 @@ function CaseDetail({ record }: { record: CaseRow }) {
         to a permission the reader may not hold while holding cases.edit.
       */}
       {canAssign && <CaseAssignment record={record} />}
+
+      {/* Hearings before tasks: a court date is the thing a matter turns on,
+          and the work is arranged around it. */}
+      <CaseHearings caseId={record.id} caseCourt={record.court} />
 
       <CaseTasks caseId={record.id} />
     </article>

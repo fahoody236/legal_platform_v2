@@ -5,6 +5,7 @@ import { CasesModule } from "./cases/cases.module.js";
 import { ClientsModule } from "./clients/clients.module.js";
 import { DashboardModule } from "./dashboard/dashboard.module.js";
 import { DatabaseModule } from "./database/database.module.js";
+import { HearingsModule } from "./hearings/hearings.module.js";
 import { HealthController } from "./health.controller.js";
 import { PermissionsModule } from "./permissions/permissions.module.js";
 import { RolesModule } from "./roles/roles.module.js";
@@ -30,6 +31,7 @@ import { UsersModule } from "./users/users.module.js";
     ClientsModule,
     UsersModule,
     TasksModule,
+    HearingsModule,
     SearchModule,
     DashboardModule,
     RolesModule,

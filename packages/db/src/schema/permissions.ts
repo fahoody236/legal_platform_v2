@@ -38,9 +38,8 @@ export const permissions = pgTable("permissions", {
 export type Permission = typeof permissions.$inferSelect;
 
 /**
- * The keys seeded by migrations 0008, 0010 and 0012, as a type. Mirrors the migrations
- * rather
- * than generating it — the database is the source of truth, and the foreign key
+ * The keys seeded by migrations 0008, 0010, 0012 and 0017, as a type. Mirrors the
+ * migrations rather than generating it — the database is the source of truth, and the foreign key
  * from `role_permissions` is what actually enforces that a grant names a real
  * permission. This exists so application code referring to a key is checked at
  * compile time instead of failing on a constraint at run time.
@@ -65,6 +64,9 @@ export const PERMISSION_KEYS = [
   "tasks.create",
   "tasks.edit",
   "tasks.assign",
+  // 0017 — hearings.
+  "hearings.view",
+  "hearings.manage",
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
