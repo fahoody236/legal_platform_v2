@@ -53,39 +53,61 @@ function messageFor(error: unknown): string | null {
 /**
  * Who works here and what they may do.
  *
- * Needs `roles.view` for the roles and `users.view` for the directory. The
- * second is the one an administrator might lack: a firm can grant someone the
- * roles screen without the directory, in which case this page can say so but
- * not much else.
+ * Open on either `roles.view` or `users.manage`, because two different jobs
+ * meet on this screen and neither needs the other's permission. Someone who
+ * administers permissions reads the roles each colleague holds; someone who
+ * administers people adds them, edits their names, and disables them when
+ * they leave. A firm can hire an office manager for the second without
+ * handing them the first.
  *
- * Two managing permissions, kept apart because the API keeps them apart:
- * `users.manage` adds, edits, disables and invites people; `roles.manage`
- * decides what they may do. Someone holding only the first sees the new-user
- * form without the roles checklist, and a note saying who assigns them.
+ * So the roles are a section of this screen rather than its subject. Without
+ * `roles.view` the role column and the role checklist are simply not there —
+ * not greyed out, not empty — and the queries behind them are never made,
+ * which matters because the API would refuse them and the screen would have
+ * to explain an error nobody caused.
+ *
+ * `users.view` is the third permission in play and is the one an
+ * administrator might lack without noticing: it gates the directory itself,
+ * so without it this screen has nothing to list and says so.
  */
 export function SettingsUsersPage() {
-  const canView = useHasPermission("roles.view");
+  const canSeeRoles = useHasPermission("roles.view");
   const canManageRoles = useHasPermission("roles.manage");
   const canManageUsers = useHasPermission("users.manage");
+  const canOpen = canSeeRoles || canManageUsers;
   const session = useSession();
-  const roles = useRoles(canView);
-  const assignments = useRoleAssignments(canView);
+  const roles = useRoles(canSeeRoles);
+  const assignments = useRoleAssignments(canSeeRoles);
   // Disabled colleagues included and marked: their roles are still on record,
   // and an administrator deciding who holds what should see the whole firm.
-  const directory = useDirectory(canView, true);
-  const invitations = useInvitations(canView && canManageUsers);
+  const directory = useDirectory(canOpen, true);
+  const invitations = useInvitations(canManageUsers);
   const [adding, setAdding] = useState(false);
 
   const error =
     roles.error ?? assignments.error ?? directory.error ?? invitations.error;
 
+  // Each half waits only for the queries it actually made.
+  const loading =
+    directory.isPending ||
+    (canSeeRoles && (roles.isPending || assignments.isPending)) ||
+    (canManageUsers && invitations.isPending);
+
+  const ready =
+    directory.isSuccess &&
+    (!canSeeRoles || (roles.isSuccess && assignments.isSuccess));
+
   return (
     <main className="wide">
       <AppHeader
         title="المستخدمون"
+        // `ready` as well as the permission: the form renders inside the list,
+        // so offering the button while the list has failed to load would be an
+        // affordance that does nothing. That happens for `users.manage`
+        // without `users.view`, where the message below is the useful answer.
         actions={
-          canView &&
-          canManageUsers && (
+          canManageUsers &&
+          ready && (
             <button
               type="button"
               disabled={adding}
@@ -98,21 +120,18 @@ export function SettingsUsersPage() {
       />
       <SettingsNav />
 
-      {!canView && session.isSuccess && (
+      {!canOpen && session.isSuccess && (
         <p className="state denied" role="alert">
-          لا تملك صلاحية عرض الأدوار والصلاحيات. راجع مدير المكتب.
+          لا تملك صلاحية عرض هذه الشاشة. تحتاج إلى صلاحية «إدارة المستخدمين» أو
+          «عرض الأدوار والصلاحيات». راجع مدير المكتب.
         </p>
       )}
 
-      {canView &&
-        (roles.isPending ||
-          assignments.isPending ||
-          directory.isPending ||
-          (canManageUsers && invitations.isPending)) && (
-          <p className="state" role="status" aria-live="polite">
-            جارٍ التحميل…
-          </p>
-        )}
+      {canOpen && loading && (
+        <p className="state" role="status" aria-live="polite">
+          جارٍ التحميل…
+        </p>
+      )}
 
       {error && (
         <p className="state error" role="alert">
@@ -124,11 +143,14 @@ export function SettingsUsersPage() {
         </p>
       )}
 
-      {roles.isSuccess && assignments.isSuccess && directory.isSuccess && (
+      {ready && (
         <UsersBody
           users={directory.data}
-          roles={roles.data}
-          assignments={assignments.data}
+          // null rather than an empty array: "I cannot see the roles" and "this
+          // firm has none" are different facts, and only the first should
+          // remove the column.
+          roles={canSeeRoles ? (roles.data ?? null) : null}
+          assignments={canSeeRoles ? (assignments.data ?? null) : null}
           invitations={invitations.data ?? []}
           canManageRoles={canManageRoles}
           canManageUsers={canManageUsers}
@@ -153,8 +175,9 @@ function UsersBody({
   onDoneAdding,
 }: {
   users: DirectoryUser[];
-  roles: Role[];
-  assignments: RoleAssignment[];
+  /** Null when the reader lacks `roles.view`: no role column, no checklist. */
+  roles: Role[] | null;
+  assignments: RoleAssignment[] | null;
   invitations: Invitation[];
   canManageRoles: boolean;
   canManageUsers: boolean;
@@ -165,13 +188,26 @@ function UsersBody({
   const activeIds = new Set(
     users.filter((u) => u.disabledAt === null).map((u) => u.id),
   );
-  const adminRoles = administratorRoleIds(roles);
-  const admins = administratorUserIds(roles, assignments, activeIds);
-  const activeRoles = roles.filter((r) => r.archivedAt === null);
+  const adminRoles = roles ? administratorRoleIds(roles) : new Set<string>();
+  /**
+   * Who the firm's administrators are — and so which row must not be disabled.
+   *
+   * Empty when the roles are invisible, which means the screen cannot lock
+   * that row in advance. The rule still holds: it is a database trigger, the
+   * commit is refused, and the row shows the same sentence the lock would
+   * have. A reader without `roles.view` meets it a moment later than one with.
+   */
+  const admins =
+    roles && assignments
+      ? administratorUserIds(roles, assignments, activeIds)
+      : new Set<string>();
+  const activeRoles = roles?.filter((r) => r.archivedAt === null) ?? null;
 
   const rolesOf = (userId: string) =>
     new Set(
-      assignments.filter((a) => a.userId === userId).map((a) => a.roleId),
+      (assignments ?? [])
+        .filter((a) => a.userId === userId)
+        .map((a) => a.roleId),
     );
 
   const invitationOf = (userId: string) =>
@@ -288,7 +324,8 @@ function NewUserForm({
   canManageRoles,
   onDone,
 }: {
-  roles: Role[];
+  /** Null when the reader lacks `roles.view`; the checklist is then absent. */
+  roles: Role[] | null;
   adminRoles: Set<string>;
   canManageRoles: boolean;
   onDone: () => void;
@@ -313,7 +350,7 @@ function NewUserForm({
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const wantRoles = canManageRoles && roleIds.size > 0;
+    const wantRoles = canManageRoles && roles !== null && roleIds.size > 0;
 
     create.mutate(
       {
@@ -405,7 +442,7 @@ function NewUserForm({
         />
       </div>
 
-      {canManageRoles ? (
+      {canManageRoles && roles !== null ? (
         <fieldset className="permission-groups">
           <legend>الأدوار</legend>
           <div className="permission-group">
@@ -427,8 +464,8 @@ function NewUserForm({
         </fieldset>
       ) : (
         <p className="hint">
-          يُنشأ الحساب بلا أدوار. إسناد الأدوار يتطلب صلاحية «إدارة الأدوار
-          والصلاحيات».
+          يُنشأ الحساب بلا أدوار. إسناد الأدوار يتطلب صلاحيتَي «عرض الأدوار
+          والصلاحيات» و«إدارة الأدوار والصلاحيات».
         </p>
       )}
 
@@ -470,7 +507,8 @@ function UserRow({
   isSoleAdministrator,
 }: {
   user: DirectoryUser;
-  roles: Role[];
+  /** Null when the reader lacks `roles.view`. */
+  roles: Role[] | null;
   adminRoles: Set<string>;
   held: Set<string>;
   invitation: Invitation | null;
@@ -490,7 +528,9 @@ function UserRow({
   const enable = useEnableUser(user.id);
   const resend = useResendInvitation(user.id);
 
-  const heldNames = roles.filter((r) => held.has(r.id)).map((r) => r.name);
+  const heldNames = (roles ?? [])
+    .filter((r) => held.has(r.id))
+    .map((r) => r.name);
   const disabled = user.disabledAt !== null;
   const invitationLabel =
     invitation && !disabled ? INVITATION_LABELS[invitation.status] : null;
@@ -593,12 +633,16 @@ function UserRow({
           )}
         </div>
 
-        {mode !== "roles" && (
+        {mode !== "roles" && (roles !== null || disabled) && (
           <p className="role-permissions muted">
-            {heldNames.length === 0 ? "بلا أدوار" : heldNames.join(" · ")}
+            {/* The roles are a section of this screen, not its subject: a
+                reader without roles.view gets the row without this column
+                rather than a column they cannot fill. */}
+            {roles !== null &&
+              (heldNames.length === 0 ? "بلا أدوار" : heldNames.join(" · "))}
             {disabled &&
               user.disabledAt &&
-              ` · عُطّل في ${formatDateTime(user.disabledAt)}`}
+              `${roles !== null ? " · " : ""}عُطّل في ${formatDateTime(user.disabledAt)}`}
           </p>
         )}
 
@@ -655,7 +699,7 @@ function UserRow({
           </form>
         )}
 
-        {mode === "roles" && (
+        {mode === "roles" && roles !== null && (
           <div className="role-checklist">
             {roles.map((role) => {
               // An administrator role held by the only administrator: unticking
@@ -754,7 +798,7 @@ function UserRow({
               تعديل
             </button>
           )}
-          {canManageRoles && !disabled && (
+          {canManageRoles && roles !== null && !disabled && (
             <button
               type="button"
               className="link"

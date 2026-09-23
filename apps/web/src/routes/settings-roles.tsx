@@ -30,7 +30,8 @@ const LAST_ADMIN =
 
 function messageFor(error: unknown): string | null {
   if (error instanceof ApiError) {
-    if (error.status === 409 && error.code === "last_administrator") return LAST_ADMIN;
+    if (error.status === 409 && error.code === "last_administrator")
+      return LAST_ADMIN;
     if (error.status === 409) return "يوجد دور بهذا الاسم بالفعل.";
     if (error.status === 403) return "لا تملك صلاحية إدارة الأدوار.";
     if (error.status === 404) return "لم يعد هذا الدور متاحاً.";
@@ -41,6 +42,20 @@ function messageFor(error: unknown): string | null {
   return null;
 }
 
+/**
+ * `roles.view` and nothing else opens this screen.
+ *
+ * Unlike the users screen next door, which two different jobs share, this one
+ * has a single subject: what the firm's roles are and what they carry. That
+ * is the thing `roles.view` names, so there is no second permission that
+ * could stand in for it.
+ *
+ * Without it the queries are never made — the deny is the absence of the
+ * request, not a filter over a response — and the create button is hidden
+ * too. A firm could in principle grant `roles.manage` without `roles.view`;
+ * that combination cannot use this screen, so it must not be offered a button
+ * on it either.
+ */
 export function SettingsRolesPage() {
   const canView = useHasPermission("roles.view");
   const canManage = useHasPermission("roles.manage");
@@ -55,7 +70,7 @@ export function SettingsRolesPage() {
       <AppHeader
         title="الأدوار والصلاحيات"
         actions={
-          canManage && !creating ? (
+          canView && canManage && !creating ? (
             <button type="button" onClick={() => setCreating(true)}>
               دور جديد
             </button>
@@ -71,11 +86,12 @@ export function SettingsRolesPage() {
         </p>
       )}
 
-      {canView && (roles.isPending || groups.isPending || assignments.isPending) && (
-        <p className="state" role="status" aria-live="polite">
-          جارٍ التحميل…
-        </p>
-      )}
+      {canView &&
+        (roles.isPending || groups.isPending || assignments.isPending) && (
+          <p className="state" role="status" aria-live="polite">
+            جارٍ التحميل…
+          </p>
+        )}
 
       {(roles.error || groups.error || assignments.error) && (
         <p className="state error" role="alert">
@@ -124,8 +140,11 @@ function RolesBody({
   // Administrator roles that someone actually holds. If there is exactly one,
   // taking roles.manage out of it — or archiving it — would be refused, and
   // the screen can say so before the request rather than after.
-  const heldAdminRoles = roles.filter((r) => adminRoles.has(r.id) && r.userCount > 0);
-  const soleAdminRoleId = heldAdminRoles.length === 1 ? heldAdminRoles[0]?.id : undefined;
+  const heldAdminRoles = roles.filter(
+    (r) => adminRoles.has(r.id) && r.userCount > 0,
+  );
+  const soleAdminRoleId =
+    heldAdminRoles.length === 1 ? heldAdminRoles[0]?.id : undefined;
 
   const active = roles.filter((r) => r.archivedAt === null);
   const archived = roles.filter((r) => r.archivedAt !== null);
@@ -138,7 +157,9 @@ function RolesBody({
           groups={groups}
           isSoleAdminRole={false}
           iHoldThisRole={false}
-          iHoldAnotherAdminRole={[...myRoleIds].some((id) => adminRoles.has(id))}
+          iHoldAnotherAdminRole={[...myRoleIds].some((id) =>
+            adminRoles.has(id),
+          )}
           onDone={onCreated}
         />
       )}
@@ -199,7 +220,8 @@ function RoleRow({
   const archive = useArchiveRole(role.id);
 
   const labelFor = (key: string) =>
-    groups.flatMap((g) => g.permissions).find((p) => p.key === key)?.labelAr ?? key;
+    groups.flatMap((g) => g.permissions).find((p) => p.key === key)?.labelAr ??
+    key;
 
   if (editing) {
     return (
@@ -231,12 +253,17 @@ function RoleRow({
                 : `يحمله ${role.userCount} مستخدمين`}
           </span>
           {role.permissionKeys.includes(ADMIN_PERMISSION) && (
-            <span className="badge" style={{ color: "#8a5a06", background: "#fdf3e3" }}>
+            <span
+              className="badge"
+              style={{ color: "#8a5a06", background: "#fdf3e3" }}
+            >
               إداري
             </span>
           )}
         </div>
-        {role.description && <p className="task-description">{role.description}</p>}
+        {role.description && (
+          <p className="task-description">{role.description}</p>
+        )}
         <p className="role-permissions muted">
           {role.permissionKeys.length === 0
             ? "بلا صلاحيات"
@@ -246,7 +273,11 @@ function RoleRow({
 
       {canManage && (
         <div className="task-actions">
-          <button type="button" className="link" onClick={() => setEditing(true)}>
+          <button
+            type="button"
+            className="link"
+            onClick={() => setEditing(true)}
+          >
             تعديل
           </button>
           {/*
@@ -260,7 +291,11 @@ function RoleRow({
             disabled={archive.isPending || isSoleAdminRole}
             title={isSoleAdminRole ? LAST_ADMIN : undefined}
             onClick={() => {
-              if (window.confirm(`أرشفة الدور «${role.name}»؟ سيفقد من يحمله صلاحياته منه.`)) {
+              if (
+                window.confirm(
+                  `أرشفة الدور «${role.name}»؟ سيفقد من يحمله صلاحياته منه.`,
+                )
+              ) {
                 archive.mutate(undefined);
               }
             }}
@@ -319,7 +354,9 @@ function RoleEditor({
 }) {
   const [name, setName] = useState(role?.name ?? "");
   const [description, setDescription] = useState(role?.description ?? "");
-  const [keys, setKeys] = useState<Set<string>>(new Set(role?.permissionKeys ?? []));
+  const [keys, setKeys] = useState<Set<string>>(
+    new Set(role?.permissionKeys ?? []),
+  );
   const [nameError, setNameError] = useState<string | null>(null);
 
   const create = useCreateRole();
@@ -419,7 +456,10 @@ function RoleEditor({
               const locked = adminLocked && permission.key === ADMIN_PERMISSION;
 
               return (
-                <label key={permission.key} className="toggle permission-toggle">
+                <label
+                  key={permission.key}
+                  className="toggle permission-toggle"
+                >
                   <input
                     type="checkbox"
                     checked={keys.has(permission.key)}
@@ -427,9 +467,7 @@ function RoleEditor({
                     onChange={() => toggle(permission.key)}
                   />
                   {permission.labelAr}
-                  {locked && (
-                    <span className="hint"> — {LAST_ADMIN}</span>
-                  )}
+                  {locked && <span className="hint"> — {LAST_ADMIN}</span>}
                 </label>
               );
             })}
@@ -439,15 +477,25 @@ function RoleEditor({
 
       {removingOwnAdmin && (
         <p className="state denied" role="status">
-          تنبيه: هذا التغيير ينزع صلاحية الإدارة من نفسك. سيُطلب تأكيدك عند الحفظ.
+          تنبيه: هذا التغيير ينزع صلاحية الإدارة من نفسك. سيُطلب تأكيدك عند
+          الحفظ.
         </p>
       )}
 
       <div className="form-actions">
         <button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? "جارٍ الحفظ…" : mode === "create" ? "إنشاء" : "حفظ"}
+          {mutation.isPending
+            ? "جارٍ الحفظ…"
+            : mode === "create"
+              ? "إنشاء"
+              : "حفظ"}
         </button>
-        <button type="button" className="secondary" disabled={mutation.isPending} onClick={onDone}>
+        <button
+          type="button"
+          className="secondary"
+          disabled={mutation.isPending}
+          onClick={onDone}
+        >
           إلغاء
         </button>
       </div>

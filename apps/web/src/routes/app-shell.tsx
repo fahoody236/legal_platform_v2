@@ -133,6 +133,10 @@ export function AppShell() {
  *
  * Settings is the one exception: administration that most of a firm cannot
  * enter is noise in their navigation, not a place they should know exists.
+ * It appears for either administrative permission, and leads to whichever of
+ * its two screens the reader can actually read — a link that always pointed
+ * at the roles screen would, for someone who only manages people, be a link
+ * to a refusal.
  */
 function Sidebar({
   ref,
@@ -148,7 +152,9 @@ function Sidebar({
   const session = useSession();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const canSeeSettings = useHasPermission("roles.view");
+  const canSeeRoles = useHasPermission("roles.view");
+  const canManageUsers = useHasPermission("users.manage");
+  const canSeeSettings = canSeeRoles || canManageUsers;
 
   async function signOut() {
     try {
@@ -207,7 +213,7 @@ function Sidebar({
         </Link>
         {canSeeSettings && (
           <Link
-            to="/settings/roles"
+            to={canSeeRoles ? "/settings/roles" : "/settings/users"}
             className={inSettings ? "current" : undefined}
           >
             <SettingsIcon />
