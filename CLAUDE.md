@@ -110,6 +110,9 @@ The replacement lives in a separate tree — `apps/api` (NestJS), `packages/db`,
 prototype above. Decisions are recorded in `docs/decisions/`; the adversaries
 the design answers to are in `docs/threat-model.md`.
 
+**Read `docs/ROADMAP.md` at the start of every session, and update it in the
+same commit that closes a phase.**
+
 ### Migrations are hand-written, and `drizzle-kit generate` is not used
 
 `packages/db/migrations/` holds numbered `.sql` files applied by
