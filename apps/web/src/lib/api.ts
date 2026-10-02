@@ -38,8 +38,10 @@ export async function apiFetch<T>(
     // The session token is an HttpOnly cookie: the browser stores and replays
     // it, and this is what allows it to. Nothing here ever sees the token.
     credentials: "include",
+    // FormData sets its own multipart Content-Type, boundary included; naming
+    // JSON over it would make the server parse an upload as a JSON body.
     headers:
-      init?.body === undefined
+      init?.body === undefined || init.body instanceof FormData
         ? init?.headers
         : { "Content-Type": "application/json", ...init?.headers },
   });

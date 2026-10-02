@@ -12,6 +12,7 @@ export * from "./clients.js";
 export * from "./roles.js";
 export * from "./tasks.js";
 export * from "./hearings.js";
+export * from "./documents.js";
 export * from "./search.js";
 export * from "./dashboard.js";
 export * from "./invitations.js";

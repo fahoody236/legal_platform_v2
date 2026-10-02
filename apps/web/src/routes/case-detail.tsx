@@ -10,6 +10,7 @@ import {
 import { formatDate, formatDateTime } from "../lib/dates.js";
 import { useHasPermission } from "../lib/session.js";
 import { CaseAssignment } from "./case-assignment.js";
+import { CaseDocuments } from "./case-documents.js";
 import { CaseHearings } from "./case-hearings.js";
 import { CaseTasks } from "./case-tasks.js";
 import { CaseForm, toCaseBody, type CaseFormValues } from "./case-form.js";
@@ -243,6 +244,8 @@ function CaseDetail({ record }: { record: CaseRow }) {
       {/* Hearings before tasks: a court date is the thing a matter turns on,
           and the work is arranged around it. */}
       <CaseHearings caseId={record.id} caseCourt={record.court} />
+
+      <CaseDocuments caseId={record.id} />
 
       <CaseTasks caseId={record.id} />
     </article>

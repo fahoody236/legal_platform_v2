@@ -2,7 +2,15 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type Database } from "./client.js";
-import { firms, invitations, users } from "./schema/index.js";
+import {
+  cases,
+  clients,
+  documentVersions,
+  documents,
+  firms,
+  invitations,
+  users,
+} from "./schema/index.js";
 import { withTenant } from "./tenant-context.js";
 
 /**
@@ -83,6 +91,45 @@ const userB = {
   fullNameAr: "ليلى الحربي",
 };
 
+/**
+ * A client and a case per firm, for the document tests. The commercial
+ * registration satisfies 0011's identifier check for a company. A literal is
+ * safe here where it was not for subdomains: registrations are unique per
+ * firm, and every run's firms are new.
+ */
+const clientA = {
+  id: randomUUID(),
+  firmId: firmA.id,
+  clientType: "company" as const,
+  nameAr: "شركة أ",
+  commercialRegistration: "1010000001",
+};
+const clientB = {
+  id: randomUUID(),
+  firmId: firmB.id,
+  clientType: "company" as const,
+  nameAr: "شركة ب",
+  commercialRegistration: "1010000002",
+};
+const caseA = {
+  id: randomUUID(),
+  firmId: firmA.id,
+  clientId: clientA.id,
+  caseNumber: `T-${firmA.id.slice(0, 8)}`,
+  titleAr: "قضية أ",
+  caseType: "civil",
+  status: "open" as const,
+};
+const caseB = {
+  id: randomUUID(),
+  firmId: firmB.id,
+  clientId: clientB.id,
+  caseNumber: `T-${firmB.id.slice(0, 8)}`,
+  titleAr: "قضية ب",
+  caseType: "civil",
+  status: "open" as const,
+};
+
 let privileged: ReturnType<typeof createClient>;
 let app: ReturnType<typeof createClient>;
 let appDb: Database;
@@ -94,10 +141,24 @@ beforeAll(async () => {
 
   await privileged.db.insert(firms).values([firmA, firmB]);
   await privileged.db.insert(users).values([userA, userB]);
+  await privileged.db.insert(clients).values([clientA, clientB]);
+  await privileged.db.insert(cases).values([caseA, caseB]);
 });
 
 afterAll(async () => {
-  // Ordered by the foreign keys: invitations reference users, users firms.
+  // Ordered by the foreign keys: versions reference documents, documents
+  // cases and users, cases clients, invitations users, users firms.
+  const fixtureFirms = [firmA.id, firmB.id];
+  await privileged.db
+    .delete(documentVersions)
+    .where(inArray(documentVersions.firmId, fixtureFirms));
+  await privileged.db
+    .delete(documents)
+    .where(inArray(documents.firmId, fixtureFirms));
+  await privileged.db.delete(cases).where(inArray(cases.firmId, fixtureFirms));
+  await privileged.db
+    .delete(clients)
+    .where(inArray(clients.firmId, fixtureFirms));
   await privileged.db
     .delete(invitations)
     .where(inArray(invitations.firmId, [firmA.id, firmB.id]));
@@ -270,6 +331,185 @@ describe("tenant isolation", () => {
       tx.delete(invitations).where(eq(invitations.tokenHash, tokenHash)),
     );
     await expect(deletion).rejects.toThrow();
+  });
+});
+
+/**
+ * Documents (0018). The table whose contents are the most sensitive thing on
+ * the platform, so each claim the migration makes is checked here rather than
+ * read off it: invisible across firms, unattachable across firms, never
+ * deleted, and — for versions — never edited.
+ */
+describe("tenant isolation: documents", () => {
+  const checksum = `sha256:${"0".repeat(64)}`;
+
+  async function createDocumentInA() {
+    return withTenant(appDb, firmA.id, async (tx) => {
+      const [document] = await tx
+        .insert(documents)
+        .values({
+          firmId: firmA.id,
+          caseId: caseA.id,
+          titleAr: "لائحة الدعوى",
+          createdByUserId: userA.id,
+        })
+        .returning();
+
+      if (!document) throw new Error("fixture document not created");
+
+      const [version] = await tx
+        .insert(documentVersions)
+        .values({
+          firmId: firmA.id,
+          documentId: document.id,
+          versionNumber: 1,
+          fileName: "لائحة.pdf",
+          contentType: "application/pdf",
+          sizeBytes: 1024,
+          storageKey: `${firmA.id}/${randomUUID()}`,
+          checksum,
+          uploadedByUserId: userA.id,
+        })
+        .returning();
+
+      if (!version) throw new Error("fixture version not created");
+
+      return { document, version };
+    });
+  }
+
+  it("keeps firm A's documents and versions invisible to firm B and to no context", async () => {
+    const { document, version } = await createDocumentInA();
+
+    const fromB = await withTenant(appDb, firmB.id, async (tx) => ({
+      documents: await tx
+        .select()
+        .from(documents)
+        .where(eq(documents.id, document.id)),
+      versions: await tx
+        .select()
+        .from(documentVersions)
+        .where(eq(documentVersions.id, version.id)),
+    }));
+    expect(fromB.documents).toHaveLength(0);
+    expect(fromB.versions).toHaveLength(0);
+
+    // The storage key is what addresses the bytes. Its row being invisible is
+    // what keeps another firm from ever holding it.
+    const withoutContext = await appDb
+      .select()
+      .from(documentVersions)
+      .where(eq(documentVersions.id, version.id));
+    expect(withoutContext).toHaveLength(0);
+
+    const fromA = await withTenant(appDb, firmA.id, async (tx) =>
+      tx.select().from(documentVersions).where(eq(documentVersions.id, version.id)),
+    );
+    expect(fromA).toHaveLength(1);
+  });
+
+  it("refuses a document in firm A that points at firm B's case", async () => {
+    const attempt = withTenant(appDb, firmA.id, async (tx) =>
+      tx.insert(documents).values({
+        firmId: firmA.id,
+        caseId: caseB.id,
+        titleAr: "تسريب",
+        createdByUserId: userA.id,
+      }),
+    );
+
+    await expect(attempt).rejects.toThrow();
+  });
+
+  it("refuses firm B attaching a version to firm A's document", async () => {
+    const { document } = await createDocumentInA();
+
+    const attempt = withTenant(appDb, firmB.id, async (tx) =>
+      tx.insert(documentVersions).values({
+        firmId: firmB.id,
+        documentId: document.id,
+        versionNumber: 2,
+        fileName: "مدسوس.pdf",
+        contentType: "application/pdf",
+        sizeBytes: 1,
+        storageKey: `${firmB.id}/${randomUUID()}`,
+        checksum,
+        uploadedByUserId: userB.id,
+      }),
+    );
+
+    await expect(attempt).rejects.toThrow();
+
+    const versions = await privileged.db
+      .select()
+      .from(documentVersions)
+      .where(eq(documentVersions.documentId, document.id));
+    expect(versions).toHaveLength(1);
+  });
+
+  it("refuses moving a document into another firm", async () => {
+    const { document } = await createDocumentInA();
+
+    const attempt = withTenant(appDb, firmA.id, async (tx) =>
+      tx
+        .update(documents)
+        .set({ firmId: firmB.id })
+        .where(eq(documents.id, document.id)),
+    );
+
+    await expect(attempt).rejects.toThrow();
+
+    const [row] = await privileged.db
+      .select()
+      .from(documents)
+      .where(eq(documents.id, document.id));
+    expect(row?.firmId).toBe(firmA.id);
+  });
+
+  /**
+   * A version is the record of what was uploaded. Editing its checksum or its
+   * storage key would make the trail describe a file that is not the one
+   * served, so the application role holds no UPDATE on the table at all.
+   */
+  it("refuses editing a version, even within the firm", async () => {
+    const { version } = await createDocumentInA();
+
+    const attempt = withTenant(appDb, firmA.id, async (tx) =>
+      tx
+        .update(documentVersions)
+        .set({ storageKey: `${firmA.id}/${randomUUID()}` })
+        .where(eq(documentVersions.id, version.id)),
+    );
+
+    await expect(attempt).rejects.toThrow();
+
+    const [row] = await privileged.db
+      .select()
+      .from(documentVersions)
+      .where(eq(documentVersions.id, version.id));
+    expect(row?.storageKey).toBe(version.storageKey);
+  });
+
+  it("refuses deleting a document or a version", async () => {
+    const { document, version } = await createDocumentInA();
+
+    await expect(
+      withTenant(appDb, firmA.id, async (tx) =>
+        tx.delete(documentVersions).where(eq(documentVersions.id, version.id)),
+      ),
+    ).rejects.toThrow();
+
+    await expect(
+      withTenant(appDb, firmA.id, async (tx) =>
+        tx.delete(documents).where(eq(documents.id, document.id)),
+      ),
+    ).rejects.toThrow();
+
+    const remaining = await privileged.db
+      .select()
+      .from(documentVersions)
+      .where(eq(documentVersions.id, version.id));
+    expect(remaining).toHaveLength(1);
   });
 });
 
