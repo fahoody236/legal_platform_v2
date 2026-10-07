@@ -334,10 +334,13 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const url = process.env["DATABASE_URL"];
+  // The application role, never the privileged one: this script writes
+  // through the same policies a request does. DATABASE_URL is the migration
+  // connection and is deliberately not read here.
+  const url = process.env["DATABASE_APP_URL"];
 
   if (!url) {
-    console.error("DATABASE_URL must be set.");
+    console.error("DATABASE_APP_URL must be set (the legal_app connection).");
     process.exit(1);
   }
 

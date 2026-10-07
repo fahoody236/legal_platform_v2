@@ -4,7 +4,6 @@ import {
   Controller,
   Get,
   HttpCode,
-  HttpException,
   HttpStatus,
   Post,
   Req,
@@ -25,15 +24,13 @@ import {
 } from "./authenticated-request.js";
 import { clearSessionCookie, setSessionCookie } from "./cookies.js";
 import { loginSchema, type LoginInput } from "./dto.js";
-import { LoginRateLimiter } from "./login-rate-limiter.js";
 import { Public } from "./public.decorator.js";
+import { clientAddressOf } from "../ratelimit/client-address.js";
+import { RateLimit } from "../ratelimit/rate-limit.decorator.js";
 
 @Controller("auth")
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly rateLimiter: LoginRateLimiter,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   /**
    * The firm is taken from the tenant middleware — from the Host header — and
@@ -45,6 +42,7 @@ export class AuthController {
    * one value; this keeps the HTTP surface from reintroducing a distinction.
    */
   @Public()
+  @RateLimit("auth")
   @Post("login")
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(loginSchema))
@@ -55,24 +53,15 @@ export class AuthController {
   ): Promise<{ user: AuthenticatedUser }> {
     const firmId = requireFirmId(request);
 
-    // Consumed before the password is verified, so throttled traffic never
-    // reaches Argon2 — which is expensive by design and therefore worth
-    // shielding from anyone who has stopped caring about the answers.
-    const ip = request.socket.remoteAddress ?? null;
-
-    // Not audited, and that is a gap rather than a decision: a throttled request
-    // never reaches the service, so it never reaches a tenant transaction to
-    // record itself in. Sustained throttling is exactly what a firm reviewing an
-    // attack would want to see. Recording it needs a transaction opened for the
-    // entry alone, which is a different shape from every other entry here.
-    if (!this.rateLimiter.allow(ip ?? "unknown", body.email)) {
-      // 429 rather than a 401 that would hide the throttling. It would not hide
-      // it anyway: a rejected request returns immediately, while a real attempt
-      // spends ~22ms in Argon2, so the clock announces the difference whatever
-      // the status code says. Given that, being honest costs nothing and stops
-      // a locked-out colleague from concluding they have forgotten a password.
-      throw new HttpException("", HttpStatus.TOO_MANY_REQUESTS);
-    }
+    // The `auth` limits — per address and per submitted email — were consumed
+    // by RateLimitGuard before this ran, so throttled traffic never reaches
+    // Argon2, which is expensive by design and therefore worth shielding from
+    // anyone who has stopped caring about the answers. Refusals are 429, not
+    // a 401 that would hide the throttling: a refused request returns at
+    // once while a real attempt spends ~22ms in Argon2, so the clock would
+    // announce the difference anyway, and being honest stops a locked-out
+    // colleague from concluding they have forgotten a password.
+    const ip = clientAddressOf(request);
 
     const result = await this.authService.login(
       firmId,
@@ -98,6 +87,7 @@ export class AuthController {
    * permission still needs to be able to leave.
    */
   @SessionOnly()
+  @RateLimit("write")
   @Post("logout")
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(
@@ -111,7 +101,7 @@ export class AuthController {
       firmId,
       sessionId,
       user.userId,
-      request.socket.remoteAddress ?? null,
+      clientAddressOf(request),
     );
     clearSessionCookie(response, request);
   }

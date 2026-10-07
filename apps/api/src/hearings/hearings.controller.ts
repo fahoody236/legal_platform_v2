@@ -30,6 +30,7 @@ import {
   type UpdateHearingInput,
 } from "./dto.js";
 import { HearingsService, type AdjournResult } from "./hearings.service.js";
+import { RateLimit } from "../ratelimit/rate-limit.decorator.js";
 
 /**
  * Court dates on the firm's matters.
@@ -90,6 +91,7 @@ export class HearingsController {
 
   /** 404 for a case in another firm, as for every reference that cannot resolve. */
   @RequirePermission("hearings.manage")
+  @RateLimit("write")
   @Post()
   async create(
     @Body(new ZodValidationPipe(createHearingSchema)) body: CreateHearingInput,
@@ -103,6 +105,7 @@ export class HearingsController {
   }
 
   @RequirePermission("hearings.manage")
+  @RateLimit("write")
   @Patch(":id")
   async update(
     @Param("id", new ZodValidationPipe(hearingIdSchema)) id: string,
@@ -133,6 +136,7 @@ export class HearingsController {
    * act with a name, not a field being set.
    */
   @RequirePermission("hearings.manage")
+  @RateLimit("write")
   @Post(":id/status")
   @HttpCode(HttpStatus.OK)
   async setStatus(
@@ -160,6 +164,7 @@ export class HearingsController {
    * the form.
    */
   @RequirePermission("hearings.manage")
+  @RateLimit("write")
   @Post(":id/adjourn")
   @HttpCode(HttpStatus.OK)
   async adjourn(

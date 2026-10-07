@@ -1,4 +1,4 @@
-import type { Readable } from "node:stream";
+import type { Readable, Writable } from "node:stream";
 
 /**
  * Where a document's bytes live, behind an interface, because the answer is a
@@ -6,15 +6,34 @@ import type { Readable } from "node:stream";
  *
  * ── What the database knows ──────────────────────────────────────────────────
  *
- * Only the key `put` returns. It is opaque: nothing outside the implementation
- * that issued it may parse it, build a path from it, or turn it into a URL.
- * That is what lets the backing store change — local disk now, a second
- * implementation later — without a migration, and what keeps the rule "every
- * download passes through the API" structural. There is no method here that
- * produces an address a browser could fetch directly, so no code path can hand
- * one out.
+ * Only the key `commit` returns. It is opaque: nothing outside the
+ * implementation that issued it may parse it, build a path from it, or turn
+ * it into a URL. That is what lets the backing store change — local disk now,
+ * a second implementation later — without a migration, and what keeps the
+ * rule "every download passes through the API" structural. There is no
+ * method here that produces an address a browser could fetch directly, so no
+ * code path can hand one out.
  *
- * ── Why the firm is a parameter on both methods ──────────────────────────────
+ * ── Two steps, not one ───────────────────────────────────────────────────────
+ *
+ * An upload is streamed: `beginUpload` opens a staging area and hands back a
+ * writable; the bytes flow into it as they arrive from the client, and only
+ * once they have all arrived — and been hashed, typed and scanned — does
+ * `commit` make them a stored object with a key. Nothing is held in memory
+ * beyond the stream's own chunks and the sample the type check needs.
+ *
+ * `abort` discards what was staged. It is the one way bytes are ever removed
+ * through this interface, and it is bounded by construction: a handle can
+ * abort only its own staging area, and an implementation must refuse an
+ * abort after a commit rather than rely on callers not to ask. Committed
+ * objects are never removed — versions are append-only (migration 0018) —
+ * and an interface with no delete verb says that more strongly than a rule.
+ *
+ * `sweepStaged` is for what abort could not reach: a process that died with
+ * an upload in flight. Called at startup, when nothing can be in flight, so
+ * everything staged is an orphan.
+ *
+ * ── Why the firm is a parameter ──────────────────────────────────────────────
  *
  * The key alone would be enough to find the bytes. The firm is passed anyway
  * so an implementation can partition by tenant — a directory per firm here, a
@@ -23,17 +42,6 @@ import type { Readable } from "node:stream";
  * refuse a key that was issued to a different firm. The key reached the caller
  * through a row-level-security-scoped query, so that refusal should never
  * fire; it is there for the day something reaches this method another way.
- *
- * ── What is missing on purpose ───────────────────────────────────────────────
- *
- * No delete. Versions are never destroyed (migration 0018), and an interface
- * without the verb is a stronger statement of that than a convention. The cost
- * is the orphan: if the transaction that records a version fails after `put`
- * succeeded, the bytes stay with nothing pointing at them. The service checks
- * everything it can before writing to make that rare; reclaiming the remainder
- * is a sweep that compares storage against `document_versions`, and is
- * deferred. An unreferenced file is unreachable through the API, so the
- * exposure is the disk, which is the hosting question again.
  *
  * ── Residency ────────────────────────────────────────────────────────────────
  *
@@ -44,22 +52,39 @@ import type { Readable } from "node:stream";
  * not only to the primary copy. Any implementation added here has to answer
  * that before it is wired, not after.
  */
-export interface DocumentStorage {
+export interface UploadHandle {
+  /** Where the bytes go. The caller ends it when the upload has arrived. */
+  readonly writable: Writable;
+
+  /** True once `commit` has succeeded. Read by the cleanup that runs when a response ends. */
+  readonly committed: boolean;
+
   /**
-   * Writes the bytes and returns the key that will find them again. The key is
-   * chosen by the implementation, never by the caller, and is never reused.
-   *
-   * `contentType` is the detected type, offered because some backends store
-   * it as metadata. The file name is deliberately not a parameter: it is
-   * client data, and a backend that kept it as object metadata would be a
-   * second copy of it outside the database, outside row-level security, and
-   * outside the audit trail.
+   * The staged bytes, for the scanner. Only between the writable finishing
+   * and `commit`. A remote implementation that cannot read back what it has
+   * not yet committed will need to stage locally first; the scanner has to
+   * see the whole file, and it has to see it before the file is a version.
    */
-  put(input: {
-    firmId: string;
-    content: Buffer;
-    contentType: string;
-  }): Promise<{ key: string }>;
+  openStaged(): Readable;
+
+  /**
+   * Makes the staged bytes a stored object and returns its key. The content
+   * type is the detected one, offered because some backends keep it as
+   * metadata. The file name is deliberately not a parameter: it is client
+   * data, and a backend that kept it as object metadata would be a second
+   * copy outside the database, outside row-level security, and outside the
+   * audit trail.
+   */
+  commit(input: { contentType: string }): Promise<{ key: string }>;
+
+  /**
+   * Discards the staged bytes. Idempotent. Must throw after `commit`.
+   */
+  abort(): Promise<void>;
+}
+
+export interface DocumentStorage {
+  beginUpload(input: { firmId: string }): Promise<UploadHandle>;
 
   /**
    * Opens the bytes for reading. Rejects — before any byte is produced — if
@@ -67,6 +92,9 @@ export interface DocumentStorage {
    * caller can still answer with an error rather than a truncated file.
    */
   open(input: { firmId: string; key: string }): Promise<Readable>;
+
+  /** Removes orphaned staging areas. Returns how many. */
+  sweepStaged(): Promise<number>;
 }
 
 export const DOCUMENT_STORAGE = Symbol("legal.document-storage");

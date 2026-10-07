@@ -1,28 +1,29 @@
 import { Module } from "@nestjs/common";
+import { MulterModule } from "@nestjs/platform-express";
 import { DocumentsController } from "./documents.controller.js";
 import { DocumentsService } from "./documents.service.js";
 import {
-  DOCUMENT_SCANNER,
-  NotScanningScanner,
-} from "./scanning/document-scanner.js";
-import { DOCUMENT_STORAGE } from "./storage/document-storage.js";
-import { LocalDiskStorage } from "./storage/local-disk-storage.js";
-import { storageConfig } from "./storage/storage.config.js";
-import { UnavailableStorage } from "./storage/unavailable-storage.js";
+  DOCUMENT_STORAGE,
+  type DocumentStorage,
+} from "./storage/document-storage.js";
+import { DocumentStorageModule } from "./storage/storage.module.js";
+import { StreamingUploadEngine } from "./upload-engine.js";
 
 @Module({
-  controllers: [DocumentsController],
-  providers: [
-    DocumentsService,
-    {
-      provide: DOCUMENT_STORAGE,
-      useFactory: () =>
-        storageConfig.backend === "local"
-          ? new LocalDiskStorage(storageConfig.directory)
-          : new UnavailableStorage(),
-    },
-    // Phase 4 replaces this provider; nothing else changes.
-    { provide: DOCUMENT_SCANNER, useValue: new NotScanningScanner() },
+  imports: [
+    DocumentStorageModule,
+    // The engine needs the storage instance, which is a provider, so it is
+    // built here rather than in the decorator. FileInterceptor merges these
+    // module options under its own, so the controller keeps its limits.
+    MulterModule.registerAsync({
+      imports: [DocumentStorageModule],
+      inject: [DOCUMENT_STORAGE],
+      useFactory: (storage: DocumentStorage) => ({
+        storage: new StreamingUploadEngine(storage),
+      }),
+    }),
   ],
+  controllers: [DocumentsController],
+  providers: [DocumentsService],
 })
 export class DocumentsModule {}

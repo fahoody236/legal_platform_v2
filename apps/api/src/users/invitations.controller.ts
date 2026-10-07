@@ -18,6 +18,8 @@ import {
   type LookupInvitationInput,
 } from "./dto.js";
 import { UsersService, type InvitationPreview } from "./users.service.js";
+import { clientAddressOf } from "../ratelimit/client-address.js";
+import { RateLimit } from "../ratelimit/rate-limit.decorator.js";
 
 /**
  * The two routes a person uses before they have a session: reading who an
@@ -41,6 +43,7 @@ export class InvitationsController {
 
   /** 404 for a dead link of any kind: used, revoked, expired, or never issued. */
   @Public()
+  @RateLimit("invitation-lookup")
   @Post("lookup")
   @HttpCode(HttpStatus.OK)
   async lookup(
@@ -66,6 +69,7 @@ export class InvitationsController {
    * cheapest confirmation that they know it.
    */
   @Public()
+  @RateLimit("invitation-accept")
   @Post("accept")
   @HttpCode(HttpStatus.NO_CONTENT)
   async accept(
@@ -77,7 +81,7 @@ export class InvitationsController {
       requireFirmId(request),
       body.token,
       body.password,
-      request.socket.remoteAddress ?? null,
+      clientAddressOf(request),
     );
 
     if (!accepted) {

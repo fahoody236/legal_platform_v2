@@ -35,6 +35,7 @@ import {
   type UpdateClientInput,
   type UpdateRepresentativeInput,
 } from "./dto.js";
+import { RateLimit } from "../ratelimit/rate-limit.decorator.js";
 
 /**
  * `clients.view` reads, `clients.manage` writes.
@@ -83,6 +84,7 @@ export class ClientsController {
   }
 
   @RequirePermission("clients.manage")
+  @RateLimit("write")
   @Post()
   async create(
     @Body(new ZodValidationPipe(createClientSchema)) body: CreateClientInput,
@@ -102,6 +104,7 @@ export class ClientsController {
    * ClientsService.update for why that check cannot live in the schema.
    */
   @RequirePermission("clients.manage")
+  @RateLimit("write")
   @Patch(":id")
   async update(
     @Param("id", new ZodValidationPipe(idSchema)) id: string,
@@ -135,6 +138,7 @@ export class ClientsController {
    * timestamp.
    */
   @RequirePermission("clients.manage")
+  @RateLimit("write")
   @Post(":id/archive")
   @HttpCode(HttpStatus.OK)
   async archive(
@@ -157,6 +161,7 @@ export class ClientsController {
    * both `firm_id` and `client_type`.
    */
   @RequirePermission("clients.manage")
+  @RateLimit("write")
   @Post(":id/representatives")
   async addRepresentative(
     @Param("id", new ZodValidationPipe(idSchema)) id: string,
@@ -190,6 +195,7 @@ export class RepresentativesController {
   constructor(private readonly clients: ClientsService) {}
 
   @RequirePermission("clients.manage")
+  @RateLimit("write")
   @Patch(":id")
   async update(
     @Param("id", new ZodValidationPipe(idSchema)) id: string,
@@ -217,6 +223,7 @@ export class RepresentativesController {
   }
 
   @RequirePermission("clients.manage")
+  @RateLimit("write")
   @Post(":id/archive")
   @HttpCode(HttpStatus.OK)
   async archive(

@@ -42,20 +42,19 @@ import {
   MAX_DOCUMENT_BYTES,
   type InspectedUpload,
 } from "./upload.pipe.js";
+import { RateLimit } from "../ratelimit/rate-limit.decorator.js";
 
 /**
- * One file, held in memory, refused at 50 MB while still streaming in.
- *
- * Memory rather than a temporary file because every check needs the whole
- * thing anyway — the zip directory is at the end, the checksum covers all of
- * it — and a temporary file is a second copy of a client document on the
- * server's disk with its own cleanup to get right. The cost is up to 50 MB of
- * memory per upload in flight; at a law firm's upload rate that is the right
- * trade, and it is the first thing to revisit if it stops being one.
+ * One file, streamed to the store's staging area, refused at 50 MB while
+ * still streaming in. The storage engine that does the streaming is
+ * registered on MulterModule (storage.module.ts) and merged under these
+ * options; see upload-engine.ts for what it keeps in memory, which is a
+ * hash and two samples rather than the file.
  *
  * Guards run before interceptors, so none of this happens for a caller
- * without `documents.upload`: the permission is checked before a byte of the
- * body is read.
+ * without `documents.upload` or outside the `upload` limits: the permission
+ * and the concurrency slot are both settled before a byte of the body is
+ * read.
  *
  * `defParamCharset: "utf8"` because browsers send the file name as raw UTF-8
  * and multer otherwise decodes it as Latin-1 — every Arabic file name would
@@ -166,6 +165,7 @@ export class DocumentsController {
    * is refused, saying which of the reasons in file-type.ts applied.
    */
   @RequirePermission("documents.upload")
+  @RateLimit("upload")
   @Post()
   @UseInterceptors(singleFile)
   async create(
@@ -194,6 +194,7 @@ export class DocumentsController {
    * nothing else. 409 `{ code: "document_archived" }` on an archived one.
    */
   @RequirePermission("documents.upload")
+  @RateLimit("upload")
   @Post(":id/versions")
   @UseInterceptors(singleFile)
   async addVersion(
@@ -231,6 +232,7 @@ export class DocumentsController {
    * why that is the right order.
    */
   @RequirePermission("documents.download")
+  @RateLimit("download")
   @Get(":id/versions/:version/download")
   async download(
     @Param("id", new ZodValidationPipe(documentIdSchema)) id: string,
@@ -283,6 +285,7 @@ export class DocumentsController {
    * returns it unchanged and records nothing.
    */
   @RequirePermission("documents.manage")
+  @RateLimit("write")
   @Post(":id/archive")
   @HttpCode(HttpStatus.OK)
   async archive(

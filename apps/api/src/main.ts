@@ -37,6 +37,11 @@ const app = await NestFactory.create(AppModule);
  */
 app.setGlobalPrefix("api");
 
+// Express announces itself on every response by default. The header tells an
+// attacker which framework's known weaknesses to try first, and tells a client
+// nothing it needs.
+app.getHttpAdapter().getInstance().disable("x-powered-by");
+
 // Without this, onApplicationShutdown never runs and the database pool is left
 // open when the process is signalled.
 app.enableShutdownHooks();

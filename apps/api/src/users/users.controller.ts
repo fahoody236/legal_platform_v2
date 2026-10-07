@@ -32,6 +32,7 @@ import {
   type InvitationSummary,
   type IssuedInvitation,
 } from "./users.service.js";
+import { RateLimit } from "../ratelimit/rate-limit.decorator.js";
 
 /**
  * The firm's own user directory, and — under `users.manage` — the people in it.
@@ -93,6 +94,7 @@ export class UsersController {
    * unique index decides, not a lookup that could race it.
    */
   @RequirePermission("users.manage")
+  @RateLimit("invite")
   @Post()
   async create(
     @Body(new ZodValidationPipe(createUserSchema)) body: CreateUserInput,
@@ -110,6 +112,7 @@ export class UsersController {
   }
 
   @RequirePermission("users.manage")
+  @RateLimit("write")
   @Patch(":id")
   async update(
     @Param("id", new ZodValidationPipe(userIdSchema)) id: string,
@@ -132,6 +135,7 @@ export class UsersController {
    * the interface already knows from the role screens.
    */
   @RequirePermission("users.manage")
+  @RateLimit("write")
   @Post(":id/disable")
   @HttpCode(HttpStatus.OK)
   async disable(
@@ -154,6 +158,7 @@ export class UsersController {
   }
 
   @RequirePermission("users.manage")
+  @RateLimit("write")
   @Post(":id/enable")
   @HttpCode(HttpStatus.OK)
   async enable(
@@ -175,6 +180,7 @@ export class UsersController {
    * a separate, audited decision rather than a side effect of resending.
    */
   @RequirePermission("users.manage")
+  @RateLimit("invite")
   @Post(":id/invitations")
   async resendInvitation(
     @Param("id", new ZodValidationPipe(userIdSchema)) id: string,

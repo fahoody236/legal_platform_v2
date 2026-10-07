@@ -1,6 +1,7 @@
 import { ConflictException, NotFoundException } from "@nestjs/common";
 import { requireSession } from "../auth/authenticated-request.js";
 import type { AuthenticatedRequest } from "../auth/authenticated-request.js";
+import { clientAddressOf } from "../ratelimit/client-address.js";
 import { requireFirmId } from "../tenant/tenant-request.js";
 import {
   PG_FOREIGN_KEY_VIOLATION,
@@ -26,7 +27,10 @@ export function actorOf(request: AuthenticatedRequest): Actor {
   return {
     firmId: requireFirmId(request),
     userId: requireSession(request).user.userId,
-    ip: request.socket.remoteAddress ?? null,
+    // Resolved by the address middleware under the trusted-proxy rule, so
+    // behind the proxy this is the client and not the proxy — and in front of
+    // a forged header it is the socket, never the header.
+    ip: clientAddressOf(request),
   };
 }
 

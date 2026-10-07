@@ -22,6 +22,19 @@
  * The stored `content_type` is the detected one, from this table, never the
  * declared string. A download therefore serves a type the platform chose.
  *
+ * ── What is examined ─────────────────────────────────────────────────────────
+ *
+ * Not the whole file. Uploads stream to disk, and the check reads a sample:
+ * the first 8 KB, where every signature lives, and the last ~1.1 MB, where a
+ * zip keeps its central directory. The tail is sized so that any Word or
+ * Excel file this code would accept is covered — the directory of a file
+ * with the maximum 10,000 parts is under a megabyte, plus the 64 KB a zip
+ * comment may occupy after it — so a legitimate file never has its directory
+ * outside the sample. A file whose directory does fall outside is refused,
+ * which is the same answer it got when the whole file was in memory: more
+ * than 10,000 parts was refused then too. Same signatures, same rules, same
+ * refusal codes; only where the bytes come from changed.
+ *
  * ── Allowed, and why these ───────────────────────────────────────────────────
  *
  * PDF; Word and Excel as OOXML (.docx, .xlsx); JPEG, PNG, WebP, HEIC and TIFF
@@ -57,6 +70,36 @@
  * downloads are always served as attachments so nothing is rendered on this
  * origin either way.
  */
+
+/** Every signature below sits within the first 12 bytes; 8 KB is generous. */
+export const HEAD_BYTES = 8 * 1024;
+
+const MAX_COMMENT_LENGTH = 0xffff;
+const EOCD_MIN_LENGTH = 22;
+/** Real Office files have dozens of parts; this bounds the work on a hostile one. */
+const MAX_ENTRIES = 10_000;
+
+/** Enough tail for a directory of MAX_ENTRIES parts followed by the longest comment. */
+export const TAIL_BYTES = 1024 * 1024 + MAX_COMMENT_LENGTH + EOCD_MIN_LENGTH;
+
+/** The parts of a file the check reads. */
+export interface FileSample {
+  /** The first bytes, up to HEAD_BYTES. */
+  head: Buffer;
+  /** The last bytes, up to TAIL_BYTES. The whole file when it is smaller. */
+  tail: Buffer;
+  /** The file's full length. */
+  size: number;
+}
+
+/** A sample of a file held entirely in memory. */
+export function sampleOf(content: Buffer): FileSample {
+  return {
+    head: content.subarray(0, HEAD_BYTES),
+    tail: content.subarray(Math.max(0, content.length - TAIL_BYTES)),
+    size: content.length,
+  };
+}
 
 export const ALLOWED_KINDS = [
   "pdf",
@@ -169,7 +212,7 @@ function kindForExtension(extension: string | undefined): DocumentKind | undefin
 }
 
 /**
- * Decides whether these bytes, under this name and declared type, may be
+ * Decides whether this file, under this name and declared type, may be
  * stored — and as what.
  *
  * Order matters only for which reason is reported: extension first, because
@@ -178,7 +221,7 @@ function kindForExtension(extension: string | undefined): DocumentKind | undefin
 export function inspectFile(input: {
   fileName: string;
   declaredType: string;
-  content: Buffer;
+  sample: FileSample;
 }): Inspection {
   const claimed = kindForExtension(extensionOf(input.fileName));
 
@@ -186,7 +229,7 @@ export function inspectFile(input: {
     return { ok: false, reason: "unsupported_type" };
   }
 
-  const detected = detectKind(input.content);
+  const detected = detectKind(input.sample);
 
   if (detected.kind === undefined) {
     return {
@@ -230,35 +273,37 @@ function ascii(content: Buffer, at: number, length: number): string {
  * The kind the content is, by structure. `macros` is set when the content is
  * OOXML that would otherwise have passed, so the caller can say why.
  */
-function detectKind(content: Buffer): {
+function detectKind(sample: FileSample): {
   kind: DocumentKind | undefined;
   macros?: boolean;
 } {
+  const { head } = sample;
+
   // `%PDF-` at byte zero. Readers tolerate junk in the first kilobyte; this
   // does not, because that tolerance is what PDF polyglots are built on.
-  if (ascii(content, 0, 5) === "%PDF-") return { kind: "pdf" };
+  if (ascii(head, 0, 5) === "%PDF-") return { kind: "pdf" };
 
-  if (startsWith(content, [0xff, 0xd8, 0xff])) return { kind: "jpeg" };
+  if (startsWith(head, [0xff, 0xd8, 0xff])) return { kind: "jpeg" };
 
-  if (startsWith(content, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
+  if (startsWith(head, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
     return { kind: "png" };
   }
 
-  if (ascii(content, 0, 4) === "RIFF" && ascii(content, 8, 4) === "WEBP") {
+  if (ascii(head, 0, 4) === "RIFF" && ascii(head, 8, 4) === "WEBP") {
     return { kind: "webp" };
   }
 
   // Little- and big-endian TIFF headers.
   if (
-    startsWith(content, [0x49, 0x49, 0x2a, 0x00]) ||
-    startsWith(content, [0x4d, 0x4d, 0x00, 0x2a])
+    startsWith(head, [0x49, 0x49, 0x2a, 0x00]) ||
+    startsWith(head, [0x4d, 0x4d, 0x00, 0x2a])
   ) {
     return { kind: "tiff" };
   }
 
   // ISO base media: a box size, then `ftyp`, then the major brand.
-  if (ascii(content, 4, 4) === "ftyp") {
-    const brand = ascii(content, 8, 4);
+  if (ascii(head, 4, 4) === "ftyp") {
+    const brand = ascii(head, 8, 4);
     if (["heic", "heix", "hevc", "hevx", "heim", "heis", "mif1", "msf1"].includes(brand)) {
       return { kind: "heic" };
     }
@@ -268,8 +313,8 @@ function detectKind(content: Buffer): {
   // A local file header at byte zero. Checked here rather than left to the
   // zip parser, so that a self-extracting archive — an executable with a zip
   // appended, whose central directory parses perfectly — is refused.
-  if (startsWith(content, [0x50, 0x4b, 0x03, 0x04])) {
-    return detectOoxml(content);
+  if (startsWith(head, [0x50, 0x4b, 0x03, 0x04])) {
+    return detectOoxml(sample);
   }
 
   return { kind: undefined };
@@ -287,11 +332,11 @@ function detectKind(content: Buffer): {
  * Nothing is decompressed. Part names are stored uncompressed in the central
  * directory, which is all this reads, so a zip bomb costs nothing here.
  */
-function detectOoxml(content: Buffer): {
+function detectOoxml(sample: FileSample): {
   kind: DocumentKind | undefined;
   macros?: boolean;
 } {
-  const names = centralDirectoryNames(content);
+  const names = centralDirectoryNames(sample.tail, sample.size);
 
   if (!names || !names.has("[Content_Types].xml")) {
     return { kind: undefined };
@@ -316,36 +361,41 @@ function detectOoxml(content: Buffer): {
 
 const EOCD_SIGNATURE = 0x06054b50;
 const CENTRAL_ENTRY_SIGNATURE = 0x02014b50;
-const EOCD_MIN_LENGTH = 22;
-const MAX_COMMENT_LENGTH = 0xffff;
-/** Real Office files have dozens of parts; this bounds the work on a hostile one. */
-const MAX_ENTRIES = 10_000;
 
 /**
  * The part names in a zip's central directory, or undefined if the archive is
  * not one this will vouch for.
  *
+ * `tail` is the last `tail.length` bytes of a file `fileSize` long; offsets
+ * in the zip are absolute, so each is translated before use, and a directory
+ * that begins before the tail is refused as out of reach.
+ *
  * Strict where strictness is free. The central directory must end exactly
  * where the end-of-central-directory record begins, so nothing can be hidden
  * between them; multi-disk and zip64 archives are refused, since no Office
  * document under 50 MB is either; every length is bounds-checked against the
- * buffer before it is used.
+ * sample before it is used.
  */
-function centralDirectoryNames(content: Buffer): Set<string> | undefined {
-  if (content.length < EOCD_MIN_LENGTH) return undefined;
+function centralDirectoryNames(
+  tail: Buffer,
+  fileSize: number,
+): Set<string> | undefined {
+  if (tail.length < EOCD_MIN_LENGTH || tail.length > fileSize) return undefined;
+
+  const tailStart = fileSize - tail.length;
 
   // The end record sits at the end, followed only by its own comment, so it
   // is found by scanning backwards over at most the longest comment.
   const searchFloor = Math.max(
     0,
-    content.length - EOCD_MIN_LENGTH - MAX_COMMENT_LENGTH,
+    tail.length - EOCD_MIN_LENGTH - MAX_COMMENT_LENGTH,
   );
   let eocd = -1;
 
-  for (let at = content.length - EOCD_MIN_LENGTH; at >= searchFloor; at -= 1) {
+  for (let at = tail.length - EOCD_MIN_LENGTH; at >= searchFloor; at -= 1) {
     if (
-      content.readUInt32LE(at) === EOCD_SIGNATURE &&
-      at + EOCD_MIN_LENGTH + content.readUInt16LE(at + 20) === content.length
+      tail.readUInt32LE(at) === EOCD_SIGNATURE &&
+      at + EOCD_MIN_LENGTH + tail.readUInt16LE(at + 20) === tail.length
     ) {
       eocd = at;
       break;
@@ -354,12 +404,12 @@ function centralDirectoryNames(content: Buffer): Set<string> | undefined {
 
   if (eocd < 0) return undefined;
 
-  const disk = content.readUInt16LE(eocd + 4);
-  const directoryDisk = content.readUInt16LE(eocd + 6);
-  const entriesOnDisk = content.readUInt16LE(eocd + 8);
-  const entries = content.readUInt16LE(eocd + 10);
-  const directorySize = content.readUInt32LE(eocd + 12);
-  const directoryOffset = content.readUInt32LE(eocd + 16);
+  const disk = tail.readUInt16LE(eocd + 4);
+  const directoryDisk = tail.readUInt16LE(eocd + 6);
+  const entriesOnDisk = tail.readUInt16LE(eocd + 8);
+  const entries = tail.readUInt16LE(eocd + 10);
+  const directorySize = tail.readUInt32LE(eocd + 12);
+  const directoryOffset = tail.readUInt32LE(eocd + 16);
 
   if (disk !== 0 || directoryDisk !== 0 || entriesOnDisk !== entries) {
     return undefined;
@@ -374,23 +424,24 @@ function centralDirectoryNames(content: Buffer): Set<string> | undefined {
   }
 
   if (entries === 0 || entries > MAX_ENTRIES) return undefined;
-  if (directoryOffset + directorySize !== eocd) return undefined;
+  if (directoryOffset + directorySize !== tailStart + eocd) return undefined;
+  if (directoryOffset < tailStart) return undefined;
 
   const names = new Set<string>();
-  let at = directoryOffset;
+  let at = directoryOffset - tailStart;
 
   for (let index = 0; index < entries; index += 1) {
     if (at + 46 > eocd) return undefined;
-    if (content.readUInt32LE(at) !== CENTRAL_ENTRY_SIGNATURE) return undefined;
+    if (tail.readUInt32LE(at) !== CENTRAL_ENTRY_SIGNATURE) return undefined;
 
-    const nameLength = content.readUInt16LE(at + 28);
-    const extraLength = content.readUInt16LE(at + 30);
-    const commentLength = content.readUInt16LE(at + 32);
+    const nameLength = tail.readUInt16LE(at + 28);
+    const extraLength = tail.readUInt16LE(at + 30);
+    const commentLength = tail.readUInt16LE(at + 32);
     const next = at + 46 + nameLength + extraLength + commentLength;
 
     if (next > eocd) return undefined;
 
-    names.add(content.toString("utf8", at + 46, at + 46 + nameLength));
+    names.add(tail.toString("utf8", at + 46, at + 46 + nameLength));
     at = next;
   }
 

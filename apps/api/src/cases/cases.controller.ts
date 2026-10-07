@@ -26,6 +26,7 @@ import {
   type ListCasesQuery,
   type UpdateCaseInput,
 } from "./dto.js";
+import { RateLimit } from "../ratelimit/rate-limit.decorator.js";
 
 /**
  * Every route declares a permission. None of them is `@Public()` or
@@ -81,6 +82,7 @@ export class CasesController {
   }
 
   @RequirePermission("cases.create")
+  @RateLimit("write")
   @Post()
   async create(
     @Body(new ZodValidationPipe(createCaseSchema)) body: CreateCaseInput,
@@ -94,6 +96,7 @@ export class CasesController {
   }
 
   @RequirePermission("cases.edit")
+  @RateLimit("write")
   @Patch(":id")
   async update(
     @Param("id", new ZodValidationPipe(caseIdSchema)) id: string,
@@ -116,6 +119,7 @@ export class CasesController {
   }
 
   @RequirePermission("cases.assign")
+  @RateLimit("write")
   @Patch(":id/assign")
   async assign(
     @Param("id", new ZodValidationPipe(caseIdSchema)) id: string,

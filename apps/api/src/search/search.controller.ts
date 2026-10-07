@@ -5,6 +5,7 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { SessionOnly } from "../permissions/session-only.decorator.js";
 import { searchQuerySchema, type SearchQuery } from "./dto.js";
 import { SearchService, type SearchResponse } from "./search.service.js";
+import { RateLimit } from "../ratelimit/rate-limit.decorator.js";
 
 @Controller("search")
 export class SearchController {
@@ -28,6 +29,7 @@ export class SearchController {
    * simply found a permission inconvenient.
    */
   @SessionOnly()
+  @RateLimit("search")
   @Get()
   async find(
     @Query(new ZodValidationPipe(searchQuerySchema)) query: SearchQuery,

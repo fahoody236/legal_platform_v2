@@ -38,6 +38,12 @@ export type AuditAction =
   | "documents.version_added"
   | "documents.downloaded"
   | "documents.archived"
+  // A refused request. Its own transaction, since there is no action to
+  // share one with; capped, so a flood is a hundred rows, not a million.
+  | "ratelimit.refused"
+  // The daily download ceiling, apart from the hourly one: "who is pulling
+  // files all day" and "who had a busy hour" are different questions.
+  | "ratelimit.refused_daily"
   | "roles.created"
   | "roles.updated"
   | "roles.archived"

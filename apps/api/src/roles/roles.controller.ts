@@ -31,6 +31,7 @@ import {
   type UpdateRoleInput,
 } from "./dto.js";
 import { RolesService } from "./roles.service.js";
+import { RateLimit } from "../ratelimit/rate-limit.decorator.js";
 
 /**
  * `roles.view` reads, `roles.manage` writes — including assigning roles to
@@ -78,6 +79,7 @@ export class RolesController {
   }
 
   @RequirePermission("roles.manage")
+  @RateLimit("write")
   @Post("roles")
   async create(
     @Body(new ZodValidationPipe(createRoleSchema)) body: CreateRoleInput,
@@ -91,6 +93,7 @@ export class RolesController {
   }
 
   @RequirePermission("roles.manage")
+  @RateLimit("write")
   @Patch("roles/:id")
   async update(
     @Param("id", new ZodValidationPipe(roleIdSchema)) id: string,
@@ -113,6 +116,7 @@ export class RolesController {
   }
 
   @RequirePermission("roles.manage")
+  @RateLimit("write")
   @Post("roles/:id/archive")
   @HttpCode(HttpStatus.OK)
   async archive(
@@ -135,6 +139,7 @@ export class RolesController {
   }
 
   @RequirePermission("roles.manage")
+  @RateLimit("write")
   @Patch("users/:id/roles")
   async setUserRoles(
     @Param("id", new ZodValidationPipe(userIdSchema)) id: string,

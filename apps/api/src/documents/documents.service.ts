@@ -96,11 +96,13 @@ export class DocumentsService {
    * A new document and its first version, in one transaction with its audit
    * entry.
    *
-   * The scan runs before the transaction opens, so a slow scanner holds no
-   * connection. The case is checked before the bytes are written, so the
-   * ordinary refusal — a case that does not resolve — leaves nothing in
-   * storage. What can still orphan a file is a failure between `put` and
-   * commit; see document-storage.ts.
+   * The bytes are already staged by the time this runs; what happens here is
+   * the decision to keep them. The scan runs before the transaction opens, so
+   * a slow scanner holds no connection. The case is checked before the
+   * commit, so the ordinary refusal — a case that does not resolve — leaves
+   * nothing but a staging file, which is aborted on the spot. What can still
+   * orphan a committed file is a failure between `commit` and the
+   * transaction's own commit; see document-storage.ts.
    */
   async create(
     actor: Actor,
@@ -110,17 +112,17 @@ export class DocumentsService {
     const scan = await this.scan(upload);
 
     if (scan.status === "infected") {
+      await upload.handle.abort();
       return { refused: "rejected_by_scan" };
     }
 
     return withTenant(this.db, actor.firmId, async (tx) => {
       if (!(await caseExistsForDocuments(tx, input.caseId))) {
+        await upload.handle.abort();
         return { refused: "not_found" } as const;
       }
 
-      const { key } = await this.storage.put({
-        firmId: actor.firmId,
-        content: upload.content,
+      const { key } = await upload.handle.commit({
         contentType: upload.contentType,
       });
 
@@ -179,6 +181,7 @@ export class DocumentsService {
     const scan = await this.scan(upload);
 
     if (scan.status === "infected") {
+      await upload.handle.abort();
       return { refused: "rejected_by_scan" };
     }
 
@@ -186,16 +189,16 @@ export class DocumentsService {
       const document = await lockDocument(tx, documentId);
 
       if (!document) {
+        await upload.handle.abort();
         return { refused: "not_found" } as const;
       }
 
       if (document.archivedAt) {
+        await upload.handle.abort();
         return { refused: "document_archived" } as const;
       }
 
-      const { key } = await this.storage.put({
-        firmId: actor.firmId,
-        content: upload.content,
+      const { key } = await upload.handle.commit({
         contentType: upload.contentType,
       });
 
@@ -270,10 +273,11 @@ export class DocumentsService {
           return undefined;
         }
 
-        opened = await this.storage.open({
+        const content = await this.storage.open({
           firmId: actor.firmId,
           key: found.version.storageKey,
         });
+        opened = content;
 
         await this.audit.record(tx, {
           action: "documents.downloaded",
@@ -292,7 +296,7 @@ export class DocumentsService {
           ip: actor.ip,
         });
 
-        return { ...found, content: opened };
+        return { ...found, content };
       });
     } catch (error) {
       // No committed entry, no download: the audit write or the commit
@@ -334,8 +338,9 @@ export class DocumentsService {
    */
   private async scan(upload: InspectedUpload): Promise<ScanVerdict> {
     return this.scanner.scan({
-      content: upload.content,
+      open: () => upload.handle.openStaged(),
       contentType: upload.contentType,
+      sizeBytes: upload.sizeBytes,
     });
   }
 }

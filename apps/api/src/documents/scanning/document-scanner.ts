@@ -1,12 +1,18 @@
+import type { Readable } from "node:stream";
+
 /**
  * Malware scanning — the seam, not the scanner. Phase 4 supplies the scanner.
  *
  * ── Where the seam sits ──────────────────────────────────────────────────────
  *
- * After the type check and before the bytes are written to storage. Type
+ * After the type check and before the bytes are committed to storage. Type
  * checking is cheap and decisive and refuses most of what a scanner would, so
- * it goes first; storage comes last so a file the scanner refuses never
- * reaches the store, and there is no orphan to clean up.
+ * it goes first; the commit comes last so a file the scanner refuses never
+ * becomes a stored object, only a staging file that is discarded.
+ *
+ * The scanner reads the staged bytes as a stream, opened on demand, because
+ * the upload is no longer held in memory: a 50 MB file is on disk by the time
+ * the scanner sees it, and reading it twice is cheaper than holding it once.
  *
  * Synchronous with the upload, for now. That is the right shape for an
  * in-process or sidecar scanner (ClamAV over a socket answers a 50 MB file in
@@ -35,13 +41,20 @@ export type ScanVerdict =
   /** `signature` is the engine's name for what it found; safe to audit. */
   | { status: "infected"; engine: string; signature: string };
 
+export interface ScanInput {
+  /** Opens the staged bytes. May be called more than once. */
+  open: () => Readable;
+  contentType: string;
+  sizeBytes: number;
+}
+
 export interface DocumentScanner {
   /**
-   * Receives the bytes after the type check. Must not throw for an infected
-   * file — that is a verdict, not a failure. Throwing means the scanner could
-   * not decide, and the upload is refused rather than let through.
+   * Must not throw for an infected file — that is a verdict, not a failure.
+   * Throwing means the scanner could not decide, and the upload is refused
+   * rather than let through.
    */
-  scan(input: { content: Buffer; contentType: string }): Promise<ScanVerdict>;
+  scan(input: ScanInput): Promise<ScanVerdict>;
 }
 
 export const DOCUMENT_SCANNER = Symbol("legal.document-scanner");

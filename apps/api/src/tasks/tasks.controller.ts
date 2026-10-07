@@ -28,6 +28,7 @@ import {
   type UpdateTaskInput,
 } from "./dto.js";
 import { TasksService } from "./tasks.service.js";
+import { RateLimit } from "../ratelimit/rate-limit.decorator.js";
 
 @Controller("tasks")
 export class TasksController {
@@ -71,6 +72,7 @@ export class TasksController {
   }
 
   @RequirePermission("tasks.create")
+  @RateLimit("write")
   @Post()
   async create(
     @Body(new ZodValidationPipe(createTaskSchema)) body: CreateTaskInput,
@@ -84,6 +86,7 @@ export class TasksController {
   }
 
   @RequirePermission("tasks.edit")
+  @RateLimit("write")
   @Patch(":id")
   async update(
     @Param("id", new ZodValidationPipe(taskIdSchema)) id: string,
@@ -106,6 +109,7 @@ export class TasksController {
   }
 
   @RequirePermission("tasks.assign")
+  @RateLimit("write")
   @Patch(":id/assign")
   async assign(
     @Param("id", new ZodValidationPipe(taskIdSchema)) id: string,
@@ -143,6 +147,7 @@ export class TasksController {
    * `completed_at` have to be written together.
    */
   @RequirePermission("tasks.edit")
+  @RateLimit("write")
   @Post(":id/complete")
   @HttpCode(HttpStatus.OK)
   async complete(

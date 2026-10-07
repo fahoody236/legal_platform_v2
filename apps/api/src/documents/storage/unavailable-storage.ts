@@ -2,6 +2,7 @@ import type { Readable } from "node:stream";
 import {
   StorageUnavailableError,
   type DocumentStorage,
+  type UploadHandle,
 } from "./document-storage.js";
 
 /**
@@ -10,11 +11,15 @@ import {
  * local implementation is refused there.
  */
 export class UnavailableStorage implements DocumentStorage {
-  async put(): Promise<{ key: string }> {
+  async beginUpload(): Promise<UploadHandle> {
     throw new StorageUnavailableError();
   }
 
   async open(): Promise<Readable> {
     throw new StorageUnavailableError();
+  }
+
+  async sweepStaged(): Promise<number> {
+    return 0;
   }
 }

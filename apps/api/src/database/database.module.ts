@@ -22,17 +22,22 @@ export const DATABASE = Symbol("DATABASE");
  * Two things must be true before this application is allowed to serve a single
  * request, and both are checked here rather than trusted:
  *
- *   1. DATABASE_URL is set. No default — a fallback connection string is how a
- *      service ends up pointed at the wrong database while reporting healthy.
+ *   1. DATABASE_APP_URL is set. No default — a fallback connection string is
+ *      how a service ends up pointed at the wrong database while reporting
+ *      healthy. It is the application role's connection; DATABASE_URL is the
+ *      privileged one that applies migrations, and is deliberately not read
+ *      here, so one .env can hold both without the API ever starting on the
+ *      wrong one.
  *   2. The connected role does not bypass row-level security. See
  *      assertRlsAppliesToConnection for why this cannot be left to review.
  */
 async function connect(): Promise<Connection> {
-  const url = process.env["DATABASE_URL"];
+  const url = process.env["DATABASE_APP_URL"];
 
   if (!url) {
     throw new Error(
-      "DATABASE_URL environment variable is required but was not provided.",
+      "DATABASE_APP_URL environment variable is required but was not provided. " +
+        "It is the legal_app connection; DATABASE_URL is for migrations only.",
     );
   }
 
