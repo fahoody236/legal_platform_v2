@@ -2,7 +2,7 @@
 
 The phase plan this project has followed since the rebuild. Update this file at the end of every phase, in the same commit that closes it.
 
-Last updated: 2026-10-03, after Phase 3.
+Last updated: 2026-10-07, after rate limiting.
 
 ## Where we are
 
@@ -15,13 +15,13 @@ Last updated: 2026-10-03, after Phase 3.
 | Done | User management and invitations | Add, edit and disable users; invitations | migration 0016 |
 | Done | Court hearings | Hearings and adjournment | `920a00e`, migration 0017 |
 | Done | **3 — Documents** | Upload, versions, download, archive, content-based type check, download separate from view | `26920ef`, migration 0018 |
-| Next | Rate limiting | Invitations (public), search, document upload; remove `X-Powered-By` | — |
-| Not started | **2.6 — iPad and touch** | Tables, tap targets, forms (about 1 week) | — |
+| Done | Rate limiting | One limiter over every route, trusted-proxy address rule, streaming uploads with concurrency caps, `X-Powered-By` removed | ADR 0007 |
+| Next | **2.6 — iPad and touch** | Tables, tap targets, forms (about 1 week) | — |
 | Not started | **4 — Pilot goes live** | Deployment; Alhumoudi starts using it (about 3 weeks) | — |
 | Not started | **5 — Time and billing** | Time tracking and internal invoices (about 5 weeks) | — |
 | Not started | **6 — AI** | Search, work plans, tracking, drafting, advice (about 8 weeks) | — |
 
-State of the database: 19 migrations applied (0000–0018), 14 tenant-isolation tests passing.
+State of the database: 19 migrations applied (0000–0018), 14 tenant-isolation tests passing; 71 API unit tests (limiter, address rule, storage handles, type check).
 
 ## Required before Phase 4
 
@@ -30,6 +30,7 @@ Phase 4 puts a real firm's client data on the platform. None of these is done.
 - A server inside the Kingdom. Not bought yet.
 - Production document storage. Local disk is refused in production. Google Drive is the temporary plan, and it needs confirmation that files stay in-Kingdom; a Drive share link would also bypass the permission check and the audit log (ADR 0006).
 - Domain `orginoo.com`: `PLATFORM_DOMAIN`, wildcard DNS, SSL.
+- `TRUSTED_PROXIES` set to the real proxy addresses, and `DATABASE_APP_URL` for the API (ADR 0007). Both refuse to start when absent in production.
 - A mail transport for invitations. Links are copied by hand today (ADR 0005).
 - Virus scanning. The seam exists; the scanner does not.
 - Legacy `.doc` and `.xls` support. Refused today; law firms hold many of these.
@@ -52,6 +53,8 @@ Decided to leave for later. Each needs a decision before it is built.
 - Documents in the dashboard activity feed
 - Orphaned-file cleanup and per-firm encryption keys (ADR 0006)
 - In-Kingdom hosting for AI inference. This blocks Phase 6.
+- A shared rate-limit store (Redis), before a second API instance. The memory store multiplies every limit by the instance count (ADR 0007).
+- Upload byte budget per firm per day: a storage quota, with billing in Phase 5 (ADR 0007).
 
 ## Standing rules
 

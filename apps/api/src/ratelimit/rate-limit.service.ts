@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
 import {
   CONCURRENCY_RETRY_AFTER_SECONDS,
@@ -64,11 +65,11 @@ export type Clock = () => number;
 /**
  * One limiter for the whole API.
  *
- * Every rule of a class is consumed on every call, never short-circuited at
- * the first refusal. Stopping early would leave the later counters
- * under-counting a caller who trips an earlier one, so an attacker who
- * switches address mid-run would find the per-email budget intact. That is
- * the property the sign-in limiter had, kept.
+ * A class's rules are consumed narrow to wide and stop at the first refusal,
+ * so a request one user's rule refuses costs their firm nothing. The `auth`
+ * class opts out with `consumeAll`: its rules are independent dimensions, and
+ * there stopping early would leave the email counter under-counting a caller
+ * who tripped the address one. policy.ts has the full argument.
  */
 @Injectable()
 export class RateLimitService {
@@ -99,6 +100,10 @@ export class RateLimitService {
     let refusal: Decision | undefined;
 
     for (const rule of policy.rules) {
+      if (refusal && !policy.consumeAll) {
+        break;
+      }
+
       const key = this.keyFor(limitClass, rule, caller);
       const result = await this.store.consume(
         key,
@@ -306,7 +311,14 @@ export class RateLimitService {
       case "ip":
         return caller.address;
       case "email":
-        return `${caller.firmId ?? "-"}/${(caller.email ?? "").trim().toLowerCase()}`;
+        // Hashed, for two reasons. The body has not been validated when the
+        // guard reads it, so this could be anything up to the body-parser's
+        // limit — and a 100 KB string as a map key, times the keys the store
+        // retains, is a memory lever. And the store should not be a second
+        // place that holds email addresses in clear.
+        return `${caller.firmId ?? "-"}/${createHash("sha256")
+          .update((caller.email ?? "").trim().toLowerCase())
+          .digest("hex")}`;
       case "user":
         return caller.userId
           ? `${caller.firmId ?? "-"}/${caller.userId}`

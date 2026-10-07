@@ -65,10 +65,14 @@ describe("resolveClientAddress", () => {
 
   it("handles IPv6 peers and ranges", () => {
     const trusted = trusting("2001:db8::/32");
+    // One spelling per address: the result is the expanded form, whatever
+    // the header used.
     expect(resolveClientAddress("2001:db8::1", "2001:db8:ffff::2, 2001:4860::8888", trusted)).toBe(
-      "2001:4860::8888",
+      "2001:4860:0:0:0:0:0:8888",
     );
-    expect(resolveClientAddress("2001:db9::1", "2001:4860::8888", trusted)).toBe("2001:db9::1");
+    expect(resolveClientAddress("2001:db9::1", "2001:4860::8888", trusted)).toBe(
+      "2001:db9:0:0:0:0:0:1",
+    );
   });
 
   it("one spelling per address: mapped IPv4 collapses to dotted form", () => {

@@ -5,7 +5,7 @@ import {
   Outlet,
   redirect,
 } from "@tanstack/react-router";
-import { apiFetch, ApiError } from "./lib/api.js";
+import { apiFetch, isUnauthenticated } from "./lib/api.js";
 import { CASE_STATUSES, type CaseStatus } from "./lib/cases.js";
 import {
   TASK_PRIORITIES,
@@ -90,7 +90,10 @@ async function requireSession(): Promise<void> {
   try {
     await apiFetch<{ user: SessionUser }>("/api/auth/me");
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
+    // A 401, or the 429 the API sends in its place once an address has
+    // produced too many of them. Both mean the same thing here — no session
+    // — and the sign-in route is outside that limit, so the redirect works.
+    if (isUnauthenticated(error)) {
       throw redirect({ to: "/login" });
     }
 

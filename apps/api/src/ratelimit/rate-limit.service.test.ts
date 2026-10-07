@@ -47,12 +47,13 @@ function user(firmId: string, n: number): Caller {
 async function hit(
   service: RateLimitService,
   limitClass: LimitClass,
-  caller: Caller,
+  caller: Caller | ((i: number) => Caller),
   times: number,
 ): Promise<Decision[]> {
   const decisions: Decision[] = [];
   for (let i = 0; i < times; i += 1) {
-    decisions.push(await service.consume(limitClass, caller, `GET /test`));
+    const who = typeof caller === "function" ? caller(i) : caller;
+    decisions.push(await service.consume(limitClass, who, `GET /test`));
   }
   return decisions;
 }
@@ -63,8 +64,9 @@ function refusedAt(decisions: Decision[]): number {
 
 describe("per-caller limits, every class", () => {
   // The first rule of each class with a caller-level scope, exceeded by one.
-  const cases: Array<[LimitClass, number, Caller]> = [
-    ["auth", 100, { address: "203.0.113.5", firmId: firmA, email: "x@y.z" }],
+  const cases: Array<[LimitClass, number, Caller | ((i: number) => Caller)]> = [
+    // A different email each time, so only the per-address rule is in play.
+    ["auth", 100, (i) => ({ address: "203.0.113.5", firmId: firmA, email: `u${i}@y.z` })],
     ["invitation-lookup", 60, { address: "203.0.113.5", firmId: firmA }],
     ["invitation-accept", 40, { address: "203.0.113.5", firmId: firmA }],
     ["read", 120, user(firmA, 1)],
@@ -152,6 +154,21 @@ describe("per-caller limits, every class", () => {
   });
 });
 
+describe("one runaway user does not take the firm down", () => {
+  it("2,000 reads a minute from one user never refuse a colleague", async () => {
+    const { service } = harness();
+
+    const runaway = await hit(service, "read", user(firmA, 1), 2000);
+    expect(runaway.filter((d) => d.allowed)).toHaveLength(120);
+    expect(runaway.filter((d) => !d.allowed)).toHaveLength(1880);
+    // Every refusal was the user's own rule, never the firm's.
+    expect(runaway.every((d) => d.allowed || d.scope === "user")).toBe(true);
+
+    const colleague = await hit(service, "read", user(firmA, 2), 120);
+    expect(colleague.every((d) => d.allowed)).toBe(true);
+  });
+});
+
 describe("firm ceiling, two firms", () => {
   it("refuses firm A at its ceiling while firm B is untouched", async () => {
     const { service } = harness();
@@ -194,27 +211,24 @@ describe("download: hourly and daily", () => {
     const caller = user(firmA, 7);
     let allowedToday = 0;
 
-    for (let hour = 0; hour < 6; hour += 1) {
-      const decisions = await hit(service, "download", caller, 101);
+    // Five hours at exactly the hourly limit: nothing refused, 500 allowed.
+    for (let hour = 0; hour < 5; hour += 1) {
+      const decisions = await hit(service, "download", caller, 100);
       allowedToday += decisions.filter((d) => d.allowed).length;
-
-      const refusal = decisions[100];
-      expect(refusal?.allowed).toBe(false);
-
-      if (refusal && !refusal.allowed) {
-        // First five hours: the hourly rule. Sixth: 500 already allowed
-        // today, so the daily rule refuses before the hourly one does.
-        expect(refusal.window).toBe(hour < 5 ? "hour" : "day");
-      }
-
       advance(WINDOW_MS.hour);
     }
 
     expect(allowedToday).toBe(500);
 
+    // Sixth hour: a fresh hourly window, but the day is spent. The very first
+    // request is refused, and by the daily rule.
+    const sixth = await service.consume("download", caller, "GET /d");
+    expect(sixth.allowed).toBe(false);
+    if (!sixth.allowed) expect(sixth.window).toBe("day");
+
     const hourly = refusals.filter((r) => r.action === "ratelimit.refused");
     const daily = refusals.filter((r) => r.action === "ratelimit.refused_daily");
-    expect(hourly).toHaveLength(5);
+    expect(hourly).toHaveLength(0);
     expect(daily).toHaveLength(1);
     expect(daily[0]?.detail["window"]).toBe("day");
     expect(daily[0]?.actorUserId).toBe("user-7");
@@ -226,6 +240,30 @@ describe("download: hourly and daily", () => {
     advance(WINDOW_MS.day);
     const tomorrow = await service.consume("download", caller, "GET /d");
     expect(tomorrow.allowed).toBe(true);
+  });
+
+  /**
+   * A refused download took nothing, so it spends nothing wider: the hourly
+   * refusal does not touch the day. 101 an hour for five hours leaves the full
+   * 500 allowed, and the day's budget is exactly the downloads that happened.
+   */
+  it("a request refused by the hour does not count against the day", async () => {
+    const { service, advance } = harness();
+    const caller = user(firmA, 8);
+    let allowed = 0;
+
+    for (let hour = 0; hour < 5; hour += 1) {
+      const decisions = await hit(service, "download", caller, 101);
+      allowed += decisions.filter((d) => d.allowed).length;
+      expect(decisions[100]?.allowed).toBe(false);
+      advance(WINDOW_MS.hour);
+    }
+
+    expect(allowed).toBe(500);
+
+    // The day is spent by exactly those 500; the next is the daily rule.
+    const next = await service.consume("download", caller, "GET /d");
+    expect(!next.allowed && next.window).toBe("day");
   });
 });
 

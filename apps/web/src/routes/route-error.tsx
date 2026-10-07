@@ -1,5 +1,5 @@
 import { useRouter } from "@tanstack/react-router";
-import { isNetworkError } from "../lib/api.js";
+import { isApiError, isNetworkError, rateLimitedMessage } from "../lib/api.js";
 
 /**
  * What a route shows when its `beforeLoad` throws.
@@ -30,7 +30,9 @@ export function RouteError({ error }: { error: Error }) {
         <p className="state error" role="alert">
           {isNetworkError(error)
             ? "تعذّر الاتصال بالخادم. تحقّق من الاتصال ثم حاول مرة أخرى."
-            : "حدث خطأ غير متوقع. حاول مرة أخرى."}
+            : isApiError(error, 429)
+              ? rateLimitedMessage(error)
+              : "حدث خطأ غير متوقع. حاول مرة أخرى."}
         </p>
 
         <div className="form-actions">

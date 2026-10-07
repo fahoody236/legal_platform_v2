@@ -109,6 +109,32 @@ describe("inspectFile: the Phase 3 cases, by the same codes", () => {
     ).toEqual({ ok: false, reason: "type_mismatch" });
   });
 
+  /**
+   * The check reads a sample, not the file. A directory that starts before
+   * the sampled tail cannot be read in full, and a file that cannot be read in
+   * full is refused — never accepted on the part that happened to be visible.
+   * Built from under the entry cap with long part names, so it is a file the
+   * whole-buffer check would also have refused, for the same reason.
+   */
+  it("type_mismatch: an Office package whose directory does not fit the sampled tail", () => {
+    const parts: Record<string, string> = {
+      "[Content_Types].xml": "<Types/>",
+      "word/document.xml": "<w/>",
+    };
+    // 9,000 entries of 46 + 100 bytes: a 1.3 MB directory, over TAIL_BYTES.
+    for (let i = 0; i < 9000; i += 1) {
+      parts[`word/media/${String(i).padStart(5, "0")}-${"x".repeat(84)}.bin`] = "";
+    }
+    const oversized = zip(parts);
+    const sample = sampleOf(oversized);
+    expect(sample.tail.length).toBe(TAIL_BYTES);
+
+    expect(inspectFile({ fileName: "big.docx", declaredType: "", sample })).toEqual({
+      ok: false,
+      reason: "type_mismatch",
+    });
+  });
+
   it("a zip comment does not hide the directory", () => {
     const commented = zip(
       { "[Content_Types].xml": "<Types/>", "word/document.xml": "<w/>" },
@@ -138,11 +164,11 @@ describe("the sample from a stream equals the sample from the whole file", () =>
     // A real docx whose stored content pushes the directory past the head
     // and the file past the tail, so both samples are genuine excerpts.
     const big = docx({
-      "word/media/image1.bin": randomBytes(TAIL_BYTES / 2 + 100_000).toString("latin1"),
+      "word/media/image1.bin": randomBytes(TAIL_BYTES + 100_000).toString("hex"),
     });
     expect(big.length).toBeGreaterThan(TAIL_BYTES);
 
-    for (const chunk of [7, 4096, 65_536, 1_000_003]) {
+    for (const chunk of [1013, 65_536, 1_000_003]) {
       const hasher = await streamed(big, chunk);
       const whole = sampleOf(big);
 

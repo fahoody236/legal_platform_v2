@@ -1,5 +1,5 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { ApiError, apiFetch } from "./api.js";
+import { apiFetch, isUnauthenticated } from "./api.js";
 
 export interface SessionUser {
   userId: string;
@@ -54,7 +54,7 @@ export function useSession(): UseQueryResult<Session | null> {
       try {
         return await apiFetch<Session>("/api/auth/me");
       } catch (error) {
-        if (error instanceof ApiError && error.status === 401) {
+        if (isUnauthenticated(error)) {
           return null;
         }
 

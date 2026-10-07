@@ -19,6 +19,22 @@
  * authenticated route reached without a session, which should not happen but
  * costs nothing to cover — a `user` rule falls back to keying by address.
  *
+ * ── Nested rules, and what a refusal costs ───────────────────────────────────
+ *
+ * A class's rules are listed narrow to wide — user before firm, hour before
+ * day — and consumption stops at the first refusal. A request the user rule
+ * refuses therefore costs the firm nothing. The alternative, consuming every
+ * rule on every call, turns one runaway script into an outage for its
+ * colleagues: 2,000 requests a minute from one stolen session would exhaust
+ * the firm's 1,500 and refuse the other twenty-nine people, which is the
+ * exact failure the per-user rule exists to prevent.
+ *
+ * `auth` is the one class that consumes everything, and says so with
+ * `consumeAll`. Its two rules are not nested but independent — the address
+ * and the submitted email — and stopping at the first refusal would let a
+ * caller who has tripped the address rule keep the email budget intact by
+ * switching address. That is the property the sign-in limiter always had.
+ *
  * ── Windows ──────────────────────────────────────────────────────────────────
  *
  * Fixed, opened by the first hit. A fixed window admits up to twice the limit
@@ -60,7 +76,10 @@ export interface Concurrency {
 }
 
 export interface Policy {
+  /** Narrow to wide. Consumption stops at the first refusal unless `consumeAll`. */
   rules: Rule[];
+  /** Consume every rule on every call, refused or not. Only for independent dimensions. */
+  consumeAll?: boolean;
   concurrency?: Concurrency;
 }
 
@@ -85,6 +104,7 @@ export const POLICIES: Record<LimitClass, Policy> = {
       { scope: "ip", limit: 100, window: "quarter-hour" },
       { scope: "email", limit: 10, window: "quarter-hour" },
     ],
+    consumeAll: true,
   },
 
   // The token's 256 bits are the control; these counts only bound the reads

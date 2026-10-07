@@ -106,12 +106,21 @@ function emailOf(request: AuthenticatedRequest): string | undefined {
   return typeof email === "string" ? email : "";
 }
 
+/**
+ * 429 with `Retry-After`. The body is `{}` unless the caller gives one — an
+ * empty object rather than an empty string, because Nest renders a string
+ * message as `{ statusCode, message }`, and the point is to say nothing. The
+ * only body given is the session guard's `{ code: "unauthenticated" }`, which
+ * tells the client what the 401 it replaced would have told it, so the
+ * interface can go to sign-in rather than to an error page.
+ */
 export function refused(
   response: ServerResponse,
   decision: Decision,
+  body: Record<string, unknown> = {},
 ): HttpException {
   if (!decision.allowed) {
     response.setHeader("Retry-After", String(decision.retryAfterSeconds));
   }
-  return new HttpException("", HttpStatus.TOO_MANY_REQUESTS);
+  return new HttpException(body, HttpStatus.TOO_MANY_REQUESTS);
 }

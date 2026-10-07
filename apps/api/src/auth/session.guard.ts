@@ -93,7 +93,11 @@ export class SessionGuard implements CanActivate {
     );
 
     if (!decision.allowed) {
-      return refused(http.getResponse<ServerResponse>(), decision);
+      // The one 429 with a body. It says what the 401 would have said — this
+      // request carried no valid session — and nothing about any account.
+      return refused(http.getResponse<ServerResponse>(), decision, {
+        code: "unauthenticated",
+      });
     }
 
     return new UnauthorizedException();

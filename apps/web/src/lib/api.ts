@@ -23,9 +23,24 @@ export class ApiError extends Error {
      * last-administrator rule — which the interface has to word differently.
      */
     readonly code?: string,
+    /**
+     * Seconds to wait, from a 429's `Retry-After`. Undefined on every other
+     * status, and on a 429 that for some reason did not say.
+     */
+    readonly retryAfterSeconds?: number,
   ) {
     super(`API request failed with status ${status}`);
     this.name = "ApiError";
+  }
+
+  /**
+   * A 429 that stands in for a 401: the address has produced too many
+   * unauthenticated requests, and this was one more. Treated as "not signed
+   * in", because that is what it means — the sign-in route is not subject to
+   * that limit, so the way out is the same.
+   */
+  get isUnauthenticated(): boolean {
+    return this.status === 401 || (this.status === 429 && this.code === "unauthenticated");
   }
 }
 
@@ -47,7 +62,11 @@ export async function apiFetch<T>(
   });
 
   if (!response.ok) {
-    throw new ApiError(response.status, await errorCode(response));
+    throw new ApiError(
+      response.status,
+      await errorCode(response),
+      retryAfterOf(response),
+    );
   }
 
   // A 204 has no body to parse. Sign-out and accepting an invitation answer
@@ -76,6 +95,31 @@ async function errorCode(response: Response): Promise<string | undefined> {
     // No body, or not JSON.
   }
   return undefined;
+}
+
+function retryAfterOf(response: Response): number | undefined {
+  if (response.status !== 429) return undefined;
+  const header = response.headers.get("Retry-After");
+  const seconds = header === null ? NaN : Number(header);
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
+}
+
+/** True when the request means "sign in": a 401, or the 429 that stands in for one. */
+export function isUnauthenticated(error: unknown): boolean {
+  return error instanceof ApiError && error.isUnauthenticated;
+}
+
+/** Arabic, with the wait if the server gave one. */
+export function rateLimitedMessage(error: unknown): string {
+  const seconds = error instanceof ApiError ? error.retryAfterSeconds : undefined;
+  if (seconds === undefined) {
+    return "طلبات كثيرة في وقت قصير. انتظر قليلاً ثم حاول مرة أخرى.";
+  }
+  const wait =
+    seconds >= 120
+      ? `${Math.ceil(seconds / 60)} دقيقة`
+      : `${seconds} ثانية`;
+  return `طلبات كثيرة في وقت قصير. حاول مرة أخرى بعد ${wait}.`;
 }
 
 export function isApiError(error: unknown, status: number): boolean {

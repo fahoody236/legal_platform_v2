@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { apiFetch } from "../lib/api.js";
+import { apiFetch, isApiError, rateLimitedMessage } from "../lib/api.js";
 import { SESSION_QUERY_KEY, type SessionUser } from "../lib/session.js";
 
 /**
@@ -16,12 +16,13 @@ import { SESSION_QUERY_KEY, type SessionUser } from "../lib/session.js";
 const GENERIC_ERROR =
   "تعذّر تسجيل الدخول. تحقّق من البريد الإلكتروني وكلمة المرور.";
 
-type Status = "idle" | "submitting" | "error";
+type Status = "idle" | "submitting" | "error" | "rate-limited";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<Status>("idle");
+  const [waitMessage, setWaitMessage] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -48,7 +49,17 @@ export function LoginPage() {
       queryClient.removeQueries({ queryKey: SESSION_QUERY_KEY });
 
       await navigate({ to: "/dashboard" });
-    } catch {
+    } catch (error) {
+      // Worded apart from a rejected credential, because the remedy differs:
+      // waiting, not retyping. It says nothing about the account — the limit
+      // was consumed before the email was looked at, so a 429 arrives on the
+      // same schedule for an address that exists and one that does not.
+      if (isApiError(error, 429)) {
+        setWaitMessage(rateLimitedMessage(error));
+        setStatus("rate-limited");
+        return;
+      }
+
       // A network failure is reported the same way as a rejected credential.
       setStatus("error");
     }
@@ -102,11 +113,11 @@ export function LoginPage() {
             />
           </div>
 
-          {status === "error" && (
+          {(status === "error" || status === "rate-limited") && (
             // aria-live so a screen reader announces the failure without the
             // focus having to move to it.
             <p className="error" role="alert" aria-live="polite">
-              {GENERIC_ERROR}
+              {status === "rate-limited" ? waitMessage : GENERIC_ERROR}
             </p>
           )}
 
