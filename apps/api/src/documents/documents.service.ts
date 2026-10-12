@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import type { Readable } from "node:stream";
 import {
@@ -45,6 +46,14 @@ export interface Download {
   document: Document;
   version: DocumentVersion;
   content: Readable;
+}
+
+/** The stored bytes do not match the version's checksum. Nothing was sent. */
+export class IntegrityError extends Error {
+  constructor(readonly versionId: string) {
+    super(`Stored bytes of version ${versionId} do not match its checksum`);
+    this.name = "IntegrityError";
+  }
 }
 
 /**
@@ -259,20 +268,49 @@ export class DocumentsService {
     documentId: string,
     versionNumber: number,
   ): Promise<Download | undefined> {
+    // One short transaction to find the version. Version rows are immutable,
+    // so nothing is lost by reading them outside the transaction that will
+    // record the download — and the verifying read that follows must not
+    // hold a database connection for the length of a 50 MB file.
+    const found = await withTenant(this.db, actor.firmId, (tx) =>
+      findDocumentVersionForDownload(tx, documentId, versionNumber),
+    );
+
+    if (!found) {
+      return undefined;
+    }
+
+    const actual = await this.hashStored(actor.firmId, found.version.storageKey);
+
+    if (actual !== found.version.checksum) {
+      // Recorded, then refused. The entry is the point: a file that no longer
+      // matches what was uploaded is the event the trail exists to make
+      // visible, and it is written in its own transaction because the
+      // download it would have shared one with is not going to happen.
+      await withTenant(this.db, actor.firmId, (tx) =>
+        this.audit.record(tx, {
+          action: "documents.integrity_failed",
+          resourceType: "document",
+          resourceId: found.document.id,
+          actorUserId: actor.userId,
+          detail: {
+            caseId: found.document.caseId,
+            versionId: found.version.id,
+            versionNumber: found.version.versionNumber,
+            expected: found.version.checksum,
+            actual,
+          },
+          ip: actor.ip,
+        }),
+      );
+
+      throw new IntegrityError(found.version.id);
+    }
+
     let opened: Readable | undefined;
 
     try {
       return await withTenant(this.db, actor.firmId, async (tx) => {
-        const found = await findDocumentVersionForDownload(
-          tx,
-          documentId,
-          versionNumber,
-        );
-
-        if (!found) {
-          return undefined;
-        }
-
         const content = await this.storage.open({
           firmId: actor.firmId,
           key: found.version.storageKey,
@@ -304,6 +342,29 @@ export class DocumentsService {
       opened?.destroy();
       throw error;
     }
+  }
+
+  /**
+   * `sha256:<hex>` of the stored bytes, read in full and discarded.
+   *
+   * This is the read that makes "a tampered file is never delivered" true
+   * rather than approximately true. Streaming while hashing can only cut a
+   * transfer short, and short of its last chunk is still most of a legal
+   * document in the recipient's hands. Reading first costs a second pass over
+   * up to 50 MB per download, from local disk today; that is the price of
+   * refusing before the first byte, and it is paid before any header is sent,
+   * so a refusal is a 500 with a code and none of the file, not a truncated
+   * 200.
+   */
+  private async hashStored(firmId: string, key: string): Promise<string> {
+    const stream = await this.storage.open({ firmId, key });
+    const hash = createHash("sha256");
+
+    for await (const chunk of stream) {
+      hash.update(chunk as Buffer);
+    }
+
+    return `sha256:${hash.digest("hex")}`;
   }
 
   async archive(actor: Actor, id: string): Promise<Document | undefined> {

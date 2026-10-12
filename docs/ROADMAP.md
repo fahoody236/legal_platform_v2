@@ -2,7 +2,7 @@
 
 The phase plan this project has followed since the rebuild. Update this file at the end of every phase, in the same commit that closes it.
 
-Last updated: 2026-10-07, after rate limiting.
+Last updated: 2026-10-12, after rate limiting.
 
 ## Where we are
 
@@ -21,7 +21,7 @@ Last updated: 2026-10-07, after rate limiting.
 | Not started | **5 — Time and billing** | Time tracking and internal invoices (about 5 weeks) | — |
 | Not started | **6 — AI** | Search, work plans, tracking, drafting, advice (about 8 weeks) | — |
 
-State of the database: 19 migrations applied (0000–0018), 14 tenant-isolation tests passing; 71 API unit tests (limiter, address rule, storage handles, type check).
+State of the database: 19 migrations applied (0000–0018), 14 tenant-isolation tests passing; 79 API unit tests (limiter, leases, address rule, proxy config, storage handles, type check).
 
 ## Required before Phase 4
 

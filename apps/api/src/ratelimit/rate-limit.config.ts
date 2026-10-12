@@ -6,17 +6,19 @@ import { parseRange, type TrustedProxies } from "./client-address.js";
  * one address. Same shape as mail.config.ts and storage.config.ts.
  */
 
-const isProduction = process.env["NODE_ENV"] === "production";
-
-const raw = process.env["TRUSTED_PROXIES"];
-
 /**
  * Development defaults to trusting nothing; production must say. `none` is a
  * real answer — a deployment where the API terminates its own connections —
  * and has to be written out, because the alternative to writing it out is a
  * deployment behind a proxy nobody told the limiter about.
+ *
+ * Pure in its inputs so the rules can be unit-tested without re-importing the
+ * module under a different environment.
  */
-function resolveTrustedProxies(): TrustedProxies {
+export function resolveTrustedProxies(
+  raw: string | undefined,
+  isProduction: boolean,
+): TrustedProxies {
   if (raw === undefined || raw.trim() === "") {
     if (isProduction) {
       throw new Error(
@@ -59,5 +61,8 @@ function resolveTrustedProxies(): TrustedProxies {
 }
 
 export const rateLimitConfig = {
-  trustedProxies: resolveTrustedProxies(),
+  trustedProxies: resolveTrustedProxies(
+    process.env["TRUSTED_PROXIES"],
+    process.env["NODE_ENV"] === "production",
+  ),
 } as const;

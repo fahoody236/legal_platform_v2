@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
-import { ApiError, isApiError } from "../lib/api.js";
+import { ApiError, isApiError, rateLimitedMessage } from "../lib/api.js";
 import { formatDateTime } from "../lib/dates.js";
 import {
   ACCEPT_ATTRIBUTE,
@@ -69,13 +69,18 @@ function downloadMessage(error: unknown): string {
     if (error.code === "storage_unavailable") {
       return "تخزين المستندات غير مُهيّأ على هذا الخادم.";
     }
+    // The stored file no longer matches what was uploaded. Nothing was sent.
+    // Not "try again": the file will fail again, and the person who needs to
+    // know is the administrator, whose audit log already has the entry.
+    if (error.code === "integrity_failure") {
+      return "فشل التحقق من سلامة الملف المخزَّن ولم يُنزَّل. أبلغ مسؤول النظام.";
+    }
+    if (error.status === 429) return rateLimitedMessage(error);
     return "تعذّر تنزيل الملف. حاول مرة أخرى.";
   }
 
-  // Includes the API cutting the transfer short because the stored file no
-  // longer matches its checksum. The person cannot tell that apart from a
-  // dropped connection, and should not try again silently forever — so the
-  // message points somewhere if it persists.
+  // A transfer that ended short — a dropped connection, or the API cutting
+  // off a file altered between its verifying read and the send.
   return "انقطع التنزيل قبل اكتماله. حاول مرة أخرى، وإن تكرر ذلك فأبلغ مسؤول النظام.";
 }
 

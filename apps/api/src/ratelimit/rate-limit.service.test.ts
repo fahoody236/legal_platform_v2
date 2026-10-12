@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   FLOOD_RULE,
   POLICIES,
+  SLOT_TTL_MS,
   UNAUTHENTICATED_RULE,
   WINDOW_MS,
   type LimitClass,
@@ -336,6 +337,59 @@ describe("concurrency slots", () => {
       expect((await service.acquire("download", user(firmA, 1), route)).acquired).toBe(true);
     }
     expect((await service.acquire("download", user(firmA, 1), route)).acquired).toBe(false);
+  });
+
+  /**
+   * The backstop for a leaked slot: a lease expires on its own. Two slots
+   * taken and never released must not keep the third caller out forever.
+   */
+  it("a slot that is never released expires after SLOT_TTL_MS", async () => {
+    const { service, advance } = harness();
+    const route = "POST /documents";
+
+    expect((await service.acquire("upload", user(firmA, 1), route)).acquired).toBe(true);
+    expect((await service.acquire("upload", user(firmA, 1), route)).acquired).toBe(true);
+    expect((await service.acquire("upload", user(firmA, 1), route)).acquired).toBe(false);
+
+    advance(SLOT_TTL_MS - 1);
+    expect((await service.acquire("upload", user(firmA, 1), route)).acquired).toBe(false);
+
+    advance(2);
+    // Both leases expired at once; two fresh slots are available again.
+    expect((await service.acquire("upload", user(firmA, 1), route)).acquired).toBe(true);
+    expect((await service.acquire("upload", user(firmA, 1), route)).acquired).toBe(true);
+    expect((await service.acquire("upload", user(firmA, 1), route)).acquired).toBe(false);
+  });
+
+  /**
+   * A lease knows whose it is. Two leases expire; two new uploads take the
+   * slots; the stale releases for the expired leases arrive and free nothing,
+   * because those leases are gone — and a fifth upload is refused, since the
+   * two live ones are still in flight.
+   */
+  it("a stale release frees nothing: the cap holds against it", async () => {
+    const { service, advance } = harness();
+    const route = "POST /documents";
+
+    const first = await service.acquire("upload", user(firmA, 1), route);
+    const second = await service.acquire("upload", user(firmA, 1), route);
+    expect(first.acquired && second.acquired).toBe(true);
+
+    advance(SLOT_TTL_MS + 1);
+
+    const third = await service.acquire("upload", user(firmA, 1), route);
+    const fourth = await service.acquire("upload", user(firmA, 1), route);
+    expect(third.acquired && fourth.acquired).toBe(true);
+
+    if (first.acquired) await first.release();
+    if (second.acquired) await second.release();
+
+    const fifth = await service.acquire("upload", user(firmA, 1), route);
+    expect(fifth.acquired).toBe(false);
+
+    // A genuine release of a live lease does free its slot.
+    if (third.acquired) await third.release();
+    expect((await service.acquire("upload", user(firmA, 1), route)).acquired).toBe(true);
   });
 
   it("classes without concurrency never refuse a slot", async () => {

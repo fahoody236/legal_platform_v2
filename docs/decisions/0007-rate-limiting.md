@@ -104,6 +104,46 @@ the response closes; a startup sweep removes what a dead process left.
 
 The concurrency slot is taken in the guard, before the body is read, and released when the response closes.
 
+## Slots are leases
+
+The release on response close is the ordinary path, and it was exercised live: four slow uploads started at
+once against a cap of two — two refused immediately, two killed mid-body after 3 seconds — then three more
+killed one after another; a normal upload from the same user then returned 201, two simultaneous ones
+returned 201 and 201, and no `.partial` remained. So a dropped socket releases the slot and discards the
+staging file.
+
+That is a claim about a code path, and the primary device is an iPad on office wifi, where dropped uploads
+will be routine. If any ending ever fails to release, a per-process cap of twenty is twenty leaks away from
+refusing every firm's uploads until a restart. So a slot is a lease: it expires on its own after fifteen
+minutes, longer than a 50 MB upload on a 1 Mbit/s link takes. A leaked slot heals with nobody involved.
+
+A lease knows whose it is. `acquire` returns an id, `release` removes that lease and nothing else, and a
+release for a lease that has already expired does nothing. Without the id, a stale release — arriving after
+its lease expired and someone else took the slot — would free whichever live lease it found and admit a
+caller over the cap; the unit test for it has two leases expire, two new uploads take the slots, the stale
+releases arrive, and a fifth upload refused. In Redis the lease is a sorted-set member scored by its expiry,
+`release` is `ZREM` of that member, and the same TTL has to hold there.
+
+## A tampered file is not delivered at all
+
+The first version hashed the stream on its way out and withheld the last chunk until the hash matched. A
+mismatch therefore ended the transfer one chunk short — 3,145,728 of 3,146,104 bytes, in the test — and for a
+legal document that is most of the file in the recipient's hands.
+
+Now the stored bytes are hashed in full before any header is sent. Live, with one byte flipped in a stored
+3 MB file: 500 with the body `{ "code": "integrity_failure" }`, 28 bytes received and none of the file, and
+a `documents.integrity_failed` audit entry carrying both checksums (`expected sha256:caf04773…`, `actual
+sha256:27caa7d0…`); a second attempt was refused and audited the same way. The interface says the file failed
+verification and names the administrator rather than suggesting a retry. The outgoing stream is still
+verified as it goes, so a file altered between the two reads is cut short rather than completed.
+
+The cost is a second read of up to 50 MB per download, from local disk today. On the download concurrency
+cap it means each slot is held for the verifying read plus the transfer rather than the transfer alone —
+roughly twice as long for a file served from the same disk, and longer for a remote store. The cap stays at
+three per user; what changes is that the third slot frees later. If time-to-first-byte on a remote store
+becomes a problem, the alternative is to verify at commit and on a schedule, storing a verification
+timestamp, rather than on every download; that is a later trade, not this one.
+
 ## Costs noted, not changed
 
 Every request except `/health` is one uncached database call to resolve the firm; every authenticated request
@@ -120,7 +160,7 @@ as the net for a process that died holding a slot. That has to exist before a se
 
 ## Deferred
 
-- A shared store, with the second instance.
+- A shared store, with the second instance. Leases carry over as sorted-set members with the same TTL.
 - A byte budget per firm per day for uploads. It is a storage quota and belongs with billing in Phase 5.
 - Sliding windows. Fixed windows admit up to twice the limit across a boundary; for limits meant to catch
   floods and scripts, that is acceptable.

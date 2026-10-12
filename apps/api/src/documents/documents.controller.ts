@@ -7,6 +7,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
   Param,
@@ -17,6 +18,7 @@ import {
   ServiceUnavailableException,
   UnprocessableEntityException,
   UploadedFile,
+  UseFilters,
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
@@ -25,6 +27,7 @@ import type { AuthenticatedRequest } from "../auth/authenticated-request.js";
 import { actorOf, translateWriteError } from "../common/request-context.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { RequirePermission } from "../permissions/require-permission.decorator.js";
+import { ClientAbortedFilter } from "./client-aborted.filter.js";
 import { VerifyingStream, writeDownloadHeaders } from "./download.js";
 import {
   addVersionSchema,
@@ -35,7 +38,11 @@ import {
   type CreateDocumentInput,
   type ListDocumentsQuery,
 } from "./dto.js";
-import { DocumentsService, type UploadRefusal } from "./documents.service.js";
+import {
+  DocumentsService,
+  IntegrityError,
+  type UploadRefusal,
+} from "./documents.service.js";
 import { StorageUnavailableError } from "./storage/document-storage.js";
 import {
   DocumentUploadPipe,
@@ -88,10 +95,18 @@ function isRefusal(
   return "refused" in result;
 }
 
-/** Storage not configured is a 503 the interface can name; anything else is as-is. */
+/**
+ * Storage not configured is a 503 the interface can name. An integrity
+ * failure is a 500 with a code: the fault is the platform's, not the
+ * caller's, and the interface has to say "this file failed verification"
+ * rather than "try again". Anything else is as-is.
+ */
 function translateStorageError(error: unknown): unknown {
   if (error instanceof StorageUnavailableError) {
     return new ServiceUnavailableException({ code: "storage_unavailable" });
+  }
+  if (error instanceof IntegrityError) {
+    return new InternalServerErrorException({ code: "integrity_failure" });
   }
   return translateWriteError(error);
 }
@@ -168,6 +183,7 @@ export class DocumentsController {
   @RateLimit("upload")
   @Post()
   @UseInterceptors(singleFile)
+  @UseFilters(ClientAbortedFilter)
   async create(
     @UploadedFile(new DocumentUploadPipe()) upload: InspectedUpload,
     @Body(new ZodValidationPipe(createDocumentSchema))
@@ -197,6 +213,7 @@ export class DocumentsController {
   @RateLimit("upload")
   @Post(":id/versions")
   @UseInterceptors(singleFile)
+  @UseFilters(ClientAbortedFilter)
   async addVersion(
     @Param("id", new ZodValidationPipe(documentIdSchema)) id: string,
     @UploadedFile(new DocumentUploadPipe()) upload: InspectedUpload,
@@ -226,10 +243,13 @@ export class DocumentsController {
    * so another site cannot make a signed-in browser issue this request and
    * plant a download in someone's trail.
    *
-   * Streams through VerifyingStream, so a stored file that no longer matches
-   * its checksum is cut off before its last chunk rather than delivered. The
-   * audit entry already exists by then; see DocumentsService.download for
-   * why that is the right order.
+   * The stored bytes are hashed in full before any header is sent, and a
+   * mismatch is a 500 carryingc `{ code: "integrity_failure" }` and none of
+   * the file — a tampered legal document is not delivered at all, not
+   * delivered minus its last chunk. The stream is still
+   * run through VerifyingStream on the way out, so a file altered between the
+   * two reads is cut short rather than completed. The audit entry precedes
+   * the bytes; see DocumentsService.download for why that is the right order.
    */
   @RequirePermission("documents.download")
   @RateLimit("download")

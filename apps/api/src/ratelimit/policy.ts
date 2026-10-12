@@ -197,6 +197,17 @@ export const UNAUTHENTICATED_RULE: Rule = {
 
 export const DEFAULT_CLASS: LimitClass = "read";
 
+/**
+ * How long an in-flight slot is held before it expires on its own.
+ *
+ * Longer than any legitimate hold. A 50 MB upload on a 1 Mbit/s link — a bad
+ * day on office wifi — takes about seven minutes; a download of the same size
+ * through the verifying read and then the wire, about the same. Fifteen
+ * minutes clears both with room. A slot that outlives that is a leak, and
+ * expiring it is the backstop rate-limit-store.ts describes.
+ */
+export const SLOT_TTL_MS = 15 * MINUTE;
+
 /** Seconds to tell a refused caller to wait before trying a concurrency slot again. */
 export const CONCURRENCY_RETRY_AFTER_SECONDS = 5;
 

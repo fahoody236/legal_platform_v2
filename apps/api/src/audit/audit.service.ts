@@ -38,6 +38,10 @@ export type AuditAction =
   | "documents.version_added"
   | "documents.downloaded"
   | "documents.archived"
+  // A download refused because the stored bytes no longer match the version's
+  // checksum. Nothing was sent; this is the event an opposing party would
+  // want to know never happened silently.
+  | "documents.integrity_failed"
   // A refused request. Its own transaction, since there is no action to
   // share one with; capped, so a flood is a hundred rows, not a million.
   | "ratelimit.refused"

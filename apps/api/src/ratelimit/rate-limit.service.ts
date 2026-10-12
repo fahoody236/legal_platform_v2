@@ -4,6 +4,7 @@ import {
   CONCURRENCY_RETRY_AFTER_SECONDS,
   FLOOD_RULE,
   POLICIES,
+  SLOT_TTL_MS,
   UNAUTHENTICATED_RULE,
   WINDOW_MS,
   shouldAuditRefusal,
@@ -248,16 +249,19 @@ export class RateLimitService {
       wanted.push({ key: `inflight:${limitClass}:process`, max: concurrency.process });
     }
 
-    const held: string[] = [];
+    const held: Array<{ key: string; leaseId: string }> = [];
+    const now = this.now();
 
     for (const slot of wanted) {
-      if (await this.store.acquire(slot.key, slot.max)) {
-        held.push(slot.key);
+      const leaseId = await this.store.acquire(slot.key, slot.max, SLOT_TTL_MS, now);
+
+      if (leaseId !== undefined) {
+        held.push({ key: slot.key, leaseId });
         continue;
       }
 
-      for (const key of held) {
-        await this.store.release(key);
+      for (const lease of held) {
+        await this.store.release(lease.key, lease.leaseId, now);
       }
 
       // Refusals of a slot are capped for the audit the same way: counted
@@ -289,8 +293,9 @@ export class RateLimitService {
       release: async () => {
         if (released) return;
         released = true;
-        for (const key of held) {
-          await this.store.release(key);
+        const at = this.now();
+        for (const lease of held) {
+          await this.store.release(lease.key, lease.leaseId, at);
         }
       },
     };
