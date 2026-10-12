@@ -115,11 +115,53 @@ export function rateLimitedMessage(error: unknown): string {
   if (seconds === undefined) {
     return "طلبات كثيرة في وقت قصير. انتظر قليلاً ثم حاول مرة أخرى.";
   }
-  const wait =
-    seconds >= 120
-      ? `${Math.ceil(seconds / 60)} دقيقة`
-      : `${seconds} ثانية`;
-  return `طلبات كثيرة في وقت قصير. حاول مرة أخرى بعد ${wait}.`;
+  return `طلبات كثيرة في وقت قصير. حاول مرة أخرى بعد ${formatWait(seconds)}.`;
+}
+
+/**
+ * A duration in Arabic, as it follows «بعد».
+ *
+ * Arabic counts agree with the number in a way a `${n} ${unit}` template
+ * cannot: one and two have their own forms (دقيقة واحدة، دقيقتين), three to
+ * ten take the plural (3 دقائق), and eleven upward take the singular again
+ * (15 دقيقة). The unit changes with size too — seconds under a minute,
+ * minutes up to an hour and a half, hours beyond that — so a day's wait reads
+ * «24 ساعة» and never «1440 دقيقة». Digits stay Latin, as dates.ts chooses.
+ */
+export function formatWait(totalSeconds: number): string {
+  const seconds = Math.max(1, Math.ceil(totalSeconds));
+
+  if (seconds < 60) {
+    return count(seconds, SECONDS);
+  }
+
+  const minutes = Math.ceil(seconds / 60);
+
+  if (minutes <= 90) {
+    return count(minutes, MINUTES);
+  }
+
+  return count(Math.ceil(minutes / 60), HOURS);
+}
+
+interface Forms {
+  one: string;
+  two: string;
+  /** Three to ten. */
+  few: string;
+  /** Eleven and above. */
+  many: string;
+}
+
+const SECONDS: Forms = { one: "ثانية واحدة", two: "ثانيتين", few: "ثوانٍ", many: "ثانية" };
+const MINUTES: Forms = { one: "دقيقة واحدة", two: "دقيقتين", few: "دقائق", many: "دقيقة" };
+const HOURS: Forms = { one: "ساعة واحدة", two: "ساعتين", few: "ساعات", many: "ساعة" };
+
+function count(n: number, forms: Forms): string {
+  if (n === 1) return forms.one;
+  if (n === 2) return forms.two;
+  if (n <= 10) return `${n} ${forms.few}`;
+  return `${n} ${forms.many}`;
 }
 
 export function isApiError(error: unknown, status: number): boolean {

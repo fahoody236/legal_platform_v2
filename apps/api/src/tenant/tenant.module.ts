@@ -31,6 +31,9 @@ export class TenantModule implements NestModule {
     consumer
       .apply(TenantMiddleware)
       .exclude({ path: "api/health", method: RequestMethod.ALL })
-      .forRoutes("*");
+      // path-to-regexp v8 syntax: a named, optional wildcard. Nest would
+      // convert a bare "*" for us and warn; writing it out means nothing
+      // here depends on a conversion a later version may drop.
+      .forRoutes({ path: "{*path}", method: RequestMethod.ALL });
   }
 }
