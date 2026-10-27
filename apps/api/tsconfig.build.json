@@ -1,0 +1,10 @@
+{
+  // What `nest build` and `nest start` compile: the sources without the
+  // tests. tsconfig.json remains the typecheck config and still includes
+  // them, so `tsc --noEmit -p tsconfig.json` checks the tests and `vitest run`
+  // runs them; neither reaches dist/, and a test file that cannot resolve its
+  // runner cannot stop the server from starting. Same arrangement as
+  // packages/db.
+  "extends": "./tsconfig.json",
+  "exclude": ["src/**/*.test.ts", "dist"]
+}
