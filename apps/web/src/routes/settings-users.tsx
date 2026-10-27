@@ -407,6 +407,8 @@ function NewUserForm({
           type="email"
           dir="ltr"
           autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
           required
           value={email}
           disabled={create.isPending}
@@ -435,6 +437,8 @@ function NewUserForm({
           id="new-user-name"
           type="text"
           dir="ltr"
+          autoCapitalize="words"
+          autoCorrect="off"
           required
           value={fullName}
           disabled={create.isPending}

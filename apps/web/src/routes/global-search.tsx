@@ -203,6 +203,8 @@ export function GlobalSearch() {
           active >= 0 && rows[active] ? `${listId}-${rows[active].key}` : undefined
         }
         autoComplete="off"
+        autoCorrect="off"
+        enterKeyHint="search"
         placeholder="ابحث في العملاء والقضايا والمهام…"
         value={term}
         onChange={(event) => {

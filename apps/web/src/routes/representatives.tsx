@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type InputHTMLAttributes } from "react";
 import { ApiError } from "../lib/api.js";
 import {
   useAddRepresentative,
@@ -83,7 +83,10 @@ function RepresentativeFields({
   const field = (
     key: keyof Values,
     label: string,
-    extra?: { dir?: "ltr" },
+    extra?: Pick<
+      InputHTMLAttributes<HTMLInputElement>,
+      "dir" | "inputMode" | "autoComplete" | "autoCapitalize" | "autoCorrect"
+    >,
   ) => {
     const id = `${idPrefix}-${key}`;
 
@@ -92,7 +95,7 @@ function RepresentativeFields({
         <label htmlFor={id}>{label}</label>
         <input
           id={id}
-          dir={extra?.dir}
+          {...extra}
           value={values[key]}
           aria-describedby={errors[key] ? `${id}-error` : undefined}
           onChange={(event) => onChange(key, event.target.value)}
@@ -109,8 +112,16 @@ function RepresentativeFields({
   return (
     <>
       {field("nameAr", "الاسم (عربي)")}
-      {field("name", "الاسم (لاتيني) — اختياري", { dir: "ltr" })}
-      {field("nationalId", "رقم الهوية / الإقامة — اختياري", { dir: "ltr" })}
+      {field("name", "الاسم (لاتيني) — اختياري", {
+        dir: "ltr",
+        autoCapitalize: "words",
+        autoCorrect: "off",
+      })}
+      {field("nationalId", "رقم الهوية / الإقامة — اختياري", {
+        dir: "ltr",
+        inputMode: "numeric",
+        autoComplete: "off",
+      })}
       {field("role", "الصفة")}
     </>
   );

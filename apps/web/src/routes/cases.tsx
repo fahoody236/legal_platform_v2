@@ -8,6 +8,7 @@ import {
   type CaseStatus,
 } from "../lib/cases.js";
 import { useHasPermission } from "../lib/session.js";
+import { NARROW, useMediaQuery } from "../lib/use-media-query.js";
 import { AppHeader } from "./app-header.js";
 
 const PAGE_SIZE = 25;
@@ -157,6 +158,11 @@ function CasesBody({
   rows: CaseRow[];
   search: { status: CaseStatus | undefined; offset: number };
 }) {
+  // Below the breakpoint the six columns cannot fit, and a table scrolled
+  // sideways hides half the row and the thing that makes it tappable. The
+  // same rows become cards; the hook follows rotation.
+  const narrow = useMediaQuery(NARROW);
+
   if (isPending) {
     return (
       <p className="state" role="status" aria-live="polite">
@@ -191,9 +197,19 @@ function CasesBody({
     return <p className="state empty">لا توجد قضايا مطابقة.</p>;
   }
 
+  if (narrow) {
+    return (
+      <ul className="record-cards">
+        {rows.map((row) => (
+          <CaseCard key={row.id} row={row} search={search} />
+        ))}
+      </ul>
+    );
+  }
+
   return (
     <div className="table-scroll">
-      <table>
+      <table className="wide">
         <thead>
           <tr>
             <th scope="col">رقم القضية</th>
@@ -211,6 +227,48 @@ function CasesBody({
         </tbody>
       </table>
     </div>
+  );
+}
+
+/**
+ * The row as a card: the number and title as the heading, the rest as
+ * label/value pairs, the whole card the link. Nothing a column showed is
+ * dropped, and nothing is added — it is the same record, stacked.
+ */
+function CaseCard({
+  row,
+  search,
+}: {
+  row: CaseRow;
+  search: { status: CaseStatus | undefined; offset: number };
+}) {
+  return (
+    <li>
+      <Link
+        to="/cases/$caseId"
+        params={{ caseId: row.id }}
+        search={search}
+        className="record-card"
+      >
+        <h3>
+          <span dir="ltr" className="case-number">
+            {row.caseNumber}
+          </span>
+          <span>{row.titleAr}</span>
+          <StatusBadge status={row.status} />
+        </h3>
+        <dl>
+          <dt>العميل</dt>
+          <dd>{row.clientNameAr}</dd>
+          <dt>النوع</dt>
+          <dd>{row.caseType}</dd>
+          <dt>المحامي المسؤول</dt>
+          <dd>
+            <LawyerName name={row.assignedLawyerName} />
+          </dd>
+        </dl>
+      </Link>
+    </li>
   );
 }
 

@@ -8,6 +8,7 @@ import {
   useSession,
   type SessionUser,
 } from "../lib/session.js";
+import { NARROW } from "../lib/use-media-query.js";
 import { GlobalSearch } from "./global-search.js";
 import {
   BriefcaseIcon,
@@ -19,9 +20,6 @@ import {
   SettingsIcon,
   UsersIcon,
 } from "./icons.js";
-
-/** The width below which the sidebar leaves the flow; matches the stylesheet. */
-const NARROW = "(max-width: 48rem)";
 
 /**
  * The frame around every signed-in screen: the sidebar with the sections, the

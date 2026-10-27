@@ -4,7 +4,8 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from "@tanstack/react-query";
-import { ApiError, apiFetch } from "./api.js";
+import { ApiError, apiFetch, uploadForm } from "./api.js";
+import { formatDate } from "./dates.js";
 
 /**
  * Mirrors MAX_DOCUMENT_BYTES and the allowlist in apps/api/src/documents.
@@ -29,10 +30,52 @@ export const ALLOWED_EXTENSIONS = [
   "tiff",
 ] as const;
 
+/**
+ * The MIME types of the same kinds, for `accept` beside the extensions.
+ *
+ * iOS Safari's chooser decides what to offer — Photo Library, Take Photo,
+ * Browse — from the types it recognises, and older builds read the MIME
+ * entries and ignore extension-only lists. Mirrors the API's table in
+ * file-type.ts; the API decides from the bytes either way.
+ */
+const ACCEPT_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "image/tiff",
+];
+
 /** For the file input's `accept`: narrows the picker, enforces nothing. */
-export const ACCEPT_ATTRIBUTE = ALLOWED_EXTENSIONS.map((ext) => `.${ext}`).join(
-  ",",
-);
+export const ACCEPT_ATTRIBUTE = [
+  ...ACCEPT_TYPES,
+  ...ALLOWED_EXTENSIONS.map((ext) => `.${ext}`),
+].join(",");
+
+/** For the camera control: images only, so the chooser goes straight to the camera. */
+export const ACCEPT_CAMERA = "image/*";
+
+/**
+ * Names a device invents — `image.jpeg` from the iPad camera, `IMG_0042`,
+ * `scan`, `document` — are no title for a legal document. The form offers a
+ * dated placeholder instead of the stem, and the person corrects it.
+ */
+export function isGenericFileName(fileName: string): boolean {
+  return /^(image|img|photo|pic|scan|scanned|document|doc|file|untitled)[-_ ]?\d*$/i.test(
+    stemOf(fileName).trim(),
+  );
+}
+
+/** The title to pre-fill for a chosen file: its stem, or a dated placeholder for a generic name. */
+export function defaultTitleFor(fileName: string): string {
+  return isGenericFileName(fileName)
+    ? `مستند ممسوح — ${formatDate(new Date().toISOString())}`
+    : stemOf(fileName);
+}
 
 export function extensionOf(fileName: string): string | undefined {
   const dot = fileName.lastIndexOf(".");
@@ -156,6 +199,8 @@ export interface UploadDocumentBody {
   title: string;
   description: string;
   file: File;
+  /** Called with 0–1 as the body is sent. */
+  onProgress?: (fraction: number) => void;
 }
 
 export function useUploadDocument() {
@@ -169,21 +214,28 @@ export function useUploadDocument() {
     // Last, so the text fields are parsed before the file streams in.
     form.set("file", body.file);
 
-    return apiFetch<{ document: DocumentRow }>("/api/documents", {
-      method: "POST",
-      body: form,
-    }).then((response) => response.document);
+    return uploadForm<{ document: DocumentRow }>(
+      "/api/documents",
+      form,
+      body.onProgress,
+    ).then((response) => response.document);
   });
 }
 
-export function useUploadVersion(documentId: string) {
-  return useDocumentMutation((file: File) => {
-    const form = new FormData();
-    form.set("file", file);
+export interface UploadVersionBody {
+  file: File;
+  onProgress?: (fraction: number) => void;
+}
 
-    return apiFetch<{ document: DocumentRow }>(
+export function useUploadVersion(documentId: string) {
+  return useDocumentMutation((body: UploadVersionBody) => {
+    const form = new FormData();
+    form.set("file", body.file);
+
+    return uploadForm<{ document: DocumentRow }>(
       `/api/documents/${encodeURIComponent(documentId)}/versions`,
-      { method: "POST", body: form },
+      form,
+      body.onProgress,
     ).then((response) => response.document);
   });
 }
@@ -244,9 +296,10 @@ export async function downloadVersion(
     anchor.click();
     anchor.remove();
   } finally {
-    // Deferred: revoking synchronously can cancel the save in some browsers
-    // before it has started reading the blob.
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    // Deferred, and generously: revoking before the browser has started
+    // reading the blob cancels the save, and Safari on an iPad can take its
+    // time to begin a 50 MB one. A minute costs the memory of one file.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 }
 

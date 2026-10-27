@@ -9,6 +9,7 @@ import {
   type ClientType,
 } from "../lib/clients.js";
 import { useHasPermission } from "../lib/session.js";
+import { NARROW, useMediaQuery } from "../lib/use-media-query.js";
 import { AppHeader } from "./app-header.js";
 
 const PAGE_SIZE = 25;
@@ -167,6 +168,8 @@ function ClientsBody({
   rows: Client[];
   search: ClientsSearch;
 }) {
+  const narrow = useMediaQuery(NARROW);
+
   if (isPending) {
     return (
       <p className="state" role="status" aria-live="polite">
@@ -195,6 +198,16 @@ function ClientsBody({
     return <p className="state empty">لا يوجد عملاء مطابقون.</p>;
   }
 
+  if (narrow) {
+    return (
+      <ul className="record-cards">
+        {rows.map((row) => (
+          <ClientCard key={row.id} row={row} search={search} />
+        ))}
+      </ul>
+    );
+  }
+
   return (
     <div className="table-scroll">
       <table>
@@ -213,6 +226,54 @@ function ClientsBody({
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Archived or active, as the table's last column shows it. */
+function ClientStatusBadge({ archived }: { archived: boolean }) {
+  return archived ? (
+    <span className="badge" style={{ color: "#4a4a45", background: "#eeeeec" }}>
+      مؤرشف
+    </span>
+  ) : (
+    <span className="badge" style={{ color: "#1f6b3a", background: "#e8f4ec" }}>
+      نشط
+    </span>
+  );
+}
+
+/** The row as a card, for the narrow layout; see CaseCard. */
+function ClientCard({ row, search }: { row: Client; search: ClientsSearch }) {
+  const identifier = clientIdentifier(row);
+
+  return (
+    <li>
+      <Link
+        to="/clients/$clientId"
+        params={{ clientId: row.id }}
+        search={search}
+        className="record-card"
+      >
+        <h3>
+          <span>{row.nameAr}</span>
+          <ClientStatusBadge archived={row.archivedAt !== null} />
+        </h3>
+        <dl>
+          <dt>النوع</dt>
+          <dd>{CLIENT_TYPE_LABELS[row.clientType]}</dd>
+          <dt>المعرّف</dt>
+          <dd>
+            {identifier ? (
+              <span dir="ltr" className="case-number">
+                {identifier}
+              </span>
+            ) : (
+              <span className="muted">غير مُسجَّل</span>
+            )}
+          </dd>
+        </dl>
+      </Link>
+    </li>
   );
 }
 
@@ -265,15 +326,7 @@ function ClientTableRow({
         )}
       </td>
       <td>
-        {row.archivedAt ? (
-          <span className="badge" style={{ color: "#4a4a45", background: "#eeeeec" }}>
-            مؤرشف
-          </span>
-        ) : (
-          <span className="badge" style={{ color: "#1f6b3a", background: "#e8f4ec" }}>
-            نشط
-          </span>
-        )}
+        <ClientStatusBadge archived={row.archivedAt !== null} />
       </td>
     </tr>
   );

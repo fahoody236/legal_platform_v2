@@ -282,14 +282,14 @@ function RoleRow({
           </button>
           {/*
             Archiving the only role that makes anyone an administrator is
-            refused by the database. Disabled here with the same reason, so the
-            person sees why rather than a button that fails.
+            refused by the database. Disabled here; the reason is the visible
+            hint under the row, never a title — a disabled control shows no
+            tooltip on a touch screen, and the reason is what the person needs.
           */}
           <button
             type="button"
             className="link"
             disabled={archive.isPending || isSoleAdminRole}
-            title={isSoleAdminRole ? LAST_ADMIN : undefined}
             onClick={() => {
               if (
                 window.confirm(

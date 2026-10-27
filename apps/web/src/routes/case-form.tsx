@@ -262,8 +262,12 @@ export function CaseForm({
           <input
             id="case-caseNumber"
             // Digits and separators: an ltr run, so the caret and the order
-            // behave as the person typing expects.
+            // behave as the person typing expects. The on-screen keyboard
+            // must not capitalise or "correct" a reference like 2026/004.
             dir="ltr"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             value={values.caseNumber}
             aria-describedby={describedBy("caseNumber")}
             onChange={(event) => set("caseNumber", event.target.value)}
@@ -288,6 +292,8 @@ export function CaseForm({
         <input
           id="case-title"
           dir="ltr"
+          autoCapitalize="words"
+          autoCorrect="off"
           value={values.title}
           aria-describedby={describedBy("title")}
           onChange={(event) => set("title", event.target.value)}

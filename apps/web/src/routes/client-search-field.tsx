@@ -93,6 +93,9 @@ export function ClientSearchField({
         aria-controls={listId}
         aria-autocomplete="list"
         autoComplete="off"
+        // Autocorrect rewrites an Arabic name mid-search on iOS.
+        autoCorrect="off"
+        enterKeyHint="search"
         placeholder="ابحث بالاسم أو رقم الهوية أو السجل التجاري"
         value={term}
         aria-describedby={error ? `${inputId}-error` : undefined}

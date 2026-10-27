@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApiError, formatWait, rateLimitedMessage } from "../src/lib/api.js";
+import { ApiError, formatWait, rateLimitedMessage } from "./api.js";
 
 describe("formatWait: Arabic number agreement", () => {
   const cases: Array<[number, string]> = [

@@ -80,6 +80,70 @@ export async function apiFetch<T>(
 }
 
 /**
+ * A multipart upload with progress.
+ *
+ * `fetch` cannot report how much of a request body has been sent, and a
+ * 50 MB file over office wifi takes long enough that a button saying
+ * «جارٍ الرفع…» for a minute reads as a hang. XMLHttpRequest can. The error
+ * contract is the one apiFetch keeps: an ApiError with the status, the body's
+ * `code` if any, and `Retry-After` on a 429; a request that never reached the
+ * server rejects with a plain Error, which isNetworkError recognises.
+ */
+export function uploadForm<T>(
+  path: string,
+  form: FormData,
+  onProgress?: (fraction: number) => void,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("POST", path);
+    request.withCredentials = true;
+    request.responseType = "text";
+
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable && event.total > 0) {
+        onProgress?.(Math.min(1, event.loaded / event.total));
+      }
+    };
+
+    request.onerror = () => reject(new Error("Network request failed"));
+    request.onabort = () => reject(new Error("Upload aborted"));
+
+    request.onload = () => {
+      const body = parseJson(request.responseText);
+
+      if (request.status < 200 || request.status >= 300) {
+        const code =
+          typeof body === "object" && body !== null && "code" in body
+            ? String((body as { code: unknown }).code)
+            : undefined;
+        const retry = Number(request.getResponseHeader("Retry-After"));
+        reject(
+          new ApiError(
+            request.status,
+            code,
+            request.status === 429 && Number.isFinite(retry) ? retry : undefined,
+          ),
+        );
+        return;
+      }
+
+      resolve(body as T);
+    };
+
+    request.send(form);
+  });
+}
+
+function parseJson(text: string): unknown {
+  try {
+    return text ? JSON.parse(text) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Reads `{ code }` out of an error body, if there is one. Bodies are optional
  * and usually absent; anything unparseable is treated as absent rather than as
  * a second failure.

@@ -288,6 +288,8 @@ export function ClientForm({
         <input
           id="client-name"
           dir="ltr"
+          autoCapitalize="words"
+          autoCorrect="off"
           value={values.name}
           aria-describedby={describedBy("name")}
           onChange={(event) => set("name", event.target.value)}
@@ -305,6 +307,7 @@ export function ClientForm({
             id="client-nationalId"
             dir="ltr"
             inputMode="numeric"
+            autoComplete="off"
             value={values.nationalId}
             aria-describedby={describedBy("nationalId")}
             onChange={(event) => set("nationalId", event.target.value)}
@@ -322,6 +325,7 @@ export function ClientForm({
               id="client-commercialRegistration"
               dir="ltr"
               inputMode="numeric"
+              autoComplete="off"
               value={values.commercialRegistration}
               aria-describedby={describedBy("commercialRegistration")}
               onChange={(event) =>
@@ -340,6 +344,7 @@ export function ClientForm({
               id="client-vatNumber"
               dir="ltr"
               inputMode="numeric"
+              autoComplete="off"
               value={values.vatNumber}
               aria-describedby={describedBy("vatNumber")}
               onChange={(event) => set("vatNumber", event.target.value)}
@@ -351,6 +356,11 @@ export function ClientForm({
       <Field id="client-phone" label="الهاتف — اختياري" error={shown.phone}>
         <input
           id="client-phone"
+          // The telephone keypad on a touch screen, and the device's own
+          // number suggestions.
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
           dir="ltr"
           value={values.phone}
           aria-describedby={describedBy("phone")}
@@ -367,6 +377,8 @@ export function ClientForm({
           id="client-email"
           dir="ltr"
           type="email"
+          autoCapitalize="none"
+          autoCorrect="off"
           value={values.email}
           aria-describedby={describedBy("email")}
           onChange={(event) => set("email", event.target.value)}

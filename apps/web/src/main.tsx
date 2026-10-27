@@ -18,6 +18,17 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Marks the document touch-first when the primary pointer is coarse or the
+ * device reports touch points. The stylesheet keys every target size and the
+ * row-action shape off this one attribute. Both tests, because Safari in
+ * Responsive Design Mode reports touch points without a coarse pointer, and
+ * a few older iPadOS builds the other way round.
+ */
+const touch =
+  window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
+document.documentElement.dataset["touch"] = touch ? "true" : "false";
+
 const container = document.getElementById("root");
 
 if (!container) {

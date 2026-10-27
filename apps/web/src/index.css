@@ -84,6 +84,18 @@
   --sidebar-width: 15rem;
   --topbar-height: 3.25rem;
 
+  /*
+   * Target sizes. A finger needs 44 CSS px; a pointer does not, and a desktop
+   * interface built to 44 everywhere reads as a toy. So the sizes are tokens
+   * with a desktop default, and the touch values below replace them when the
+   * document is marked touch — main.tsx sets `data-touch` from the pointer
+   * media feature and the touch-point count, so the one attribute covers
+   * both an iPad and a desktop browser emulating one.
+   */
+  --tap: 2.25rem;
+  --tap-small: 2rem;
+  --check: 1rem;
+
   /* Three ambers and reds shared by the "denied" and "error" states, kept off
      the token list above because they are this stylesheet's, not the system's. */
   --warn-border: #8a5a06;
@@ -92,6 +104,12 @@
   --danger-border: #a3282a;
   --danger-background: #fdf2f2;
   --danger-foreground: #7a1f21;
+}
+
+:root[data-touch="true"] {
+  --tap: 44px;
+  --tap-small: 44px;
+  --check: 1.25rem;
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
@@ -180,13 +198,17 @@ a {
 .shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  /* dvh where it exists (iPadOS 15.4+): the height Safari actually shows once
+     its toolbars are accounted for. The vh line stands for anything older. */
   min-block-size: 100vh;
+  min-block-size: 100dvh;
 }
 
 .sidebar {
   position: sticky;
   inset-block-start: 0;
   block-size: 100vh;
+  block-size: 100dvh;
   display: flex;
   flex-direction: column;
   background: hsl(var(--sidebar));
@@ -267,6 +289,7 @@ html[dir="rtl"] .mirror {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  min-block-size: var(--tap);
   padding-block: 0.5rem;
   padding-inline: 0.75rem;
   border-radius: calc(var(--radius) + 2px);
@@ -274,11 +297,6 @@ html[dir="rtl"] .mirror {
   font-size: 0.92rem;
   font-weight: 500;
   text-decoration: none;
-}
-
-.sidebar-nav a:hover {
-  background: hsl(var(--sidebar-accent));
-  color: hsl(var(--sidebar-foreground));
 }
 
 /*
@@ -350,11 +368,6 @@ html[dir="rtl"] .mirror {
   color: hsl(var(--sidebar-foreground) / 55%);
 }
 
-.sidebar .icon-button:hover {
-  color: hsl(var(--sidebar-foreground));
-  background: hsl(var(--sidebar-accent));
-}
-
 .sidebar .icon-button:focus-visible {
   outline-color: hsl(var(--sidebar-foreground));
 }
@@ -389,19 +402,14 @@ html[dir="rtl"] .mirror {
 .icon-button {
   display: inline-grid;
   place-items: center;
-  inline-size: 2rem;
-  block-size: 2rem;
+  inline-size: var(--tap-small);
+  block-size: var(--tap-small);
   padding: 0;
   border: 0;
   border-radius: var(--radius);
   background: transparent;
   color: hsl(var(--muted-foreground));
   cursor: pointer;
-}
-
-.icon-button:hover {
-  background: hsl(var(--muted));
-  color: hsl(var(--foreground));
 }
 
 .icon-button svg {
@@ -444,6 +452,7 @@ main.wide {
  */
 .standalone {
   min-block-size: 100vh;
+  min-block-size: 100dvh;
   display: grid;
   place-items: center;
   padding-block: 2rem;
@@ -503,11 +512,6 @@ main.wide {
   text-decoration: none;
 }
 
-.back a:hover {
-  color: hsl(var(--foreground));
-  text-decoration: underline;
-}
-
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 
 button,
@@ -516,7 +520,7 @@ button,
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  min-block-size: 2.25rem;
+  min-block-size: var(--tap);
   padding-block: 0.35rem;
   padding-inline: 1rem;
   font: inherit;
@@ -532,32 +536,15 @@ button,
   cursor: pointer;
 }
 
-button:hover,
-.button-link:hover {
-  background: hsl(var(--primary) / 90%);
-}
-
 button:disabled {
   opacity: 0.5;
   cursor: default;
-}
-
-button:disabled:hover {
-  background: hsl(var(--primary));
 }
 
 button.secondary {
   background: hsl(var(--secondary));
   border-color: hsl(var(--secondary));
   color: hsl(var(--secondary-foreground));
-}
-
-button.secondary:hover {
-  background: hsl(var(--secondary) / 70%);
-}
-
-button.secondary:disabled:hover {
-  background: hsl(var(--secondary));
 }
 
 button.destructive {
@@ -581,19 +568,10 @@ button.link {
   white-space: normal;
 }
 
-button.link:hover {
-  background: none;
-  color: hsl(var(--primary) / 75%);
-}
-
-button.link:disabled:hover {
-  background: none;
-}
-
 button.small,
 .pagination button,
 .task-actions button {
-  min-block-size: 2rem;
+  min-block-size: var(--tap-small);
   padding-inline: 0.8rem;
   font-size: 0.85rem;
 }
@@ -618,11 +596,18 @@ input,
 select,
 textarea {
   inline-size: 100%;
-  min-block-size: 2.25rem;
+  min-block-size: var(--tap);
   padding-block: 0.4rem;
   padding-inline: 0.75rem;
   font: inherit;
-  font-size: 0.92rem;
+  /*
+   * Never below 16px. Safari on iOS zooms the page when a field with smaller
+   * text is focused, and does not zoom back — every form was left scaled and
+   * scrolled after its first field. 0.92rem is 13.8px at this root size, so
+   * the max resolves to 16px on every device; the rem half is there so a
+   * larger root would still scale.
+   */
+  font-size: max(16px, 0.92rem);
   color: inherit;
   border: 1px solid hsl(var(--input));
   border-radius: var(--radius);
@@ -667,8 +652,8 @@ select {
 
 input[type="checkbox"],
 input[type="radio"] {
-  inline-size: 1rem;
-  block-size: 1rem;
+  inline-size: var(--check);
+  block-size: var(--check);
   min-block-size: 0;
   margin: 0;
   padding: 0;
@@ -732,6 +717,8 @@ form > .field {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+  /* The whole label is the target, and it is as tall as a button. */
+  min-block-size: var(--tap);
   margin-block-end: 0;
   font-size: 0.9rem;
   font-weight: 400;
@@ -739,7 +726,7 @@ form > .field {
 }
 
 .toggle input[type="checkbox"] {
-  inline-size: 1rem;
+  inline-size: var(--check);
 }
 
 /* Filters above a list: labels, selects and toggles on one wrapping row. */
@@ -904,11 +891,15 @@ article > form {
 
 table {
   inline-size: 100%;
-  /* Below this the columns crush into one-word-per-line cells; past it the
-     table scrolls inside .table-scroll instead. */
-  min-inline-size: 44rem;
   border-collapse: collapse;
   font-size: 0.9rem;
+}
+
+/* Six columns of case data: below this they crush into one-word-per-line
+   cells, so past it the table scrolls inside .table-scroll instead. Only the
+   cases table carries it; the clients table has four columns and fits. */
+table.wide {
+  min-inline-size: 44rem;
 }
 
 th,
@@ -916,7 +907,7 @@ td {
   /* start/end, so the columns align to the right in Arabic and would align to
      the left unchanged if any part of this were ever presented in English. */
   text-align: start;
-  padding-block: 0.65rem;
+  padding-block: 0.75rem;
   padding-inline: 1rem;
   border-block-end: 1px solid hsl(var(--border));
   vertical-align: middle;
@@ -934,10 +925,6 @@ tbody tr:last-child td {
   border-block-end: 0;
 }
 
-tbody tr:hover {
-  background: hsl(var(--muted) / 50%);
-}
-
 .row-link {
   cursor: pointer;
 }
@@ -952,10 +939,62 @@ tbody tr:hover {
   font-weight: 500;
   text-decoration: none;
 }
-
-.row-link a:hover,
 .row-link a:focus-visible {
   text-decoration: underline;
+}
+
+
+/* ── Record cards ─────────────────────────────────────────────────────────── */
+
+/*
+ * What a table row becomes on a narrow screen: one card per record, the whole
+ * card a link, the columns as label/value pairs. cases.tsx and clients.tsx
+ * render these instead of the table below 60rem; the data is the same rows.
+ */
+.record-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.record-card {
+  display: block;
+  padding-block: 0.9rem;
+  padding-inline: 1.1rem;
+  border: 1px solid hsl(var(--card-border));
+  border-radius: calc(var(--radius) + 4px);
+  background: hsl(var(--card));
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+}
+
+.record-card h3 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 0.45rem;
+  font-size: 1rem;
+}
+
+.record-card dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.record-card dt {
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+
+.record-card dd {
+  margin: 0;
 }
 
 /* ── Badges ───────────────────────────────────────────────────────────────── */
@@ -992,14 +1031,6 @@ tbody tr:hover {
   background: hsl(var(--card));
   border-color: hsl(var(--border));
   color: hsl(var(--foreground));
-}
-
-.pagination button:hover {
-  background: hsl(var(--muted));
-}
-
-.pagination button:disabled:hover {
-  background: hsl(var(--card));
 }
 
 .page-count {
@@ -1187,8 +1218,8 @@ article > form {
 
 .task-actions select {
   inline-size: auto;
-  min-block-size: 2rem;
-  font-size: 0.85rem;
+  min-block-size: var(--tap-small);
+  font-size: max(16px, 0.85rem);
 }
 
 /* ── Client search (in the case form) ─────────────────────────────────────── */
@@ -1239,7 +1270,7 @@ article > form {
   justify-content: flex-start;
   /* start, so the option text begins at the leading edge in either direction. */
   text-align: start;
-  min-block-size: 0;
+  min-block-size: var(--tap-small);
   padding-block: 0.5rem;
   padding-inline: 0.75rem;
   background: none;
@@ -1249,11 +1280,10 @@ article > form {
   font-weight: 400;
   white-space: normal;
 }
-
-.search-results button:hover,
 .search-results button:focus-visible {
   background: hsl(var(--muted));
 }
+
 
 .result-name {
   font-weight: 500;
@@ -1286,6 +1316,13 @@ article > form {
  */
 .modal {
   inline-size: min(28rem, calc(100vw - 2rem));
+  /* With the on-screen keyboard up a centred dialog's lower fields sit behind
+     the keys with no way to reach them. Bounded and scrollable, it can be
+     scrolled to them; top-aligned on touch, the keyboard covers its end,
+     not its middle. */
+  max-block-size: calc(100vh - 2rem);
+  max-block-size: calc(100dvh - 2rem);
+  overflow-y: auto;
   padding-block: 1.5rem;
   padding-inline: 1.5rem;
   border: 1px solid hsl(var(--card-border));
@@ -1293,6 +1330,10 @@ article > form {
   background: hsl(var(--card));
   color: hsl(var(--card-foreground));
   box-shadow: 0 20px 50px rgb(0 0 0 / 20%);
+}
+
+:root[data-touch="true"] .modal {
+  margin-block-start: 1rem;
 }
 
 .modal::backdrop {
@@ -1313,9 +1354,9 @@ article > form {
 }
 
 .global-search input[type="search"] {
-  min-block-size: 2rem;
+  min-block-size: var(--tap-small);
   padding-block: 0.25rem;
-  font-size: 0.88rem;
+  font-size: max(16px, 0.88rem);
   background: hsl(var(--background));
   box-shadow: none;
 }
@@ -1338,7 +1379,15 @@ article > form {
   background: hsl(var(--card));
   box-shadow: 0 12px 32px rgb(0 0 0 / 14%);
   max-block-size: 70vh;
+  max-block-size: 70dvh;
   overflow-y: auto;
+}
+
+/* With the on-screen keyboard up there is half a screen, and neither vh nor
+   dvh knows it: cap the list so it stays above the keys. */
+:root[data-touch="true"] .search-popover {
+  max-block-size: 45vh;
+  max-block-size: 45dvh;
 }
 
 .search-popover .hint,
@@ -1359,7 +1408,9 @@ article > form {
 .search-row {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 0.1rem;
+  min-block-size: var(--tap-small);
   padding-block: 0.45rem;
   padding-inline: 0.6rem;
   border-radius: var(--radius);
@@ -1413,10 +1464,6 @@ article > form {
   border-radius: var(--radius);
   color: inherit;
   text-decoration: none;
-}
-
-.stat:hover {
-  background: hsl(var(--muted) / 60%);
 }
 
 .stat-warn {
@@ -1495,16 +1542,15 @@ article > form {
 }
 
 .settings-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--tap);
   padding-block: 0.5rem;
   padding-inline: 0.9rem;
   margin-block-end: -1px;
   color: hsl(var(--muted-foreground));
   text-decoration: none;
   border-block-end: 2px solid transparent;
-}
-
-.settings-nav a:hover {
-  color: hsl(var(--foreground));
 }
 
 .settings-nav a.current {
@@ -1548,7 +1594,8 @@ article > form {
 .invitation-link input {
   flex: 1;
   min-inline-size: 0;
-  font-size: 0.85rem;
+  /* Read-only, but iOS still zooms on focus of a small read-only field. */
+  font-size: max(16px, 0.85rem);
 }
 
 .role-editor h3 {
@@ -1583,6 +1630,7 @@ article > form {
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 0 0.45rem;
+  min-block-size: var(--tap);
   margin-block-end: 0.35rem;
   font-size: 0.9rem;
 }
@@ -1617,7 +1665,14 @@ article > form {
 
 /* ── Narrow screens ───────────────────────────────────────────────────────── */
 
-@media (max-width: 48rem) {
+/*
+ * 60rem (900px at this root size) rather than 48rem. The iPads the pilot firm
+ * uses are 768–834px wide in portrait; below 900 the sidebar's 15rem costs a
+ * third of the width, and what is left cannot hold a table. 1024 portrait and
+ * every landscape width keep the sidebar in the flow. use-media-query.ts
+ * carries the same value for the shell and the card/table switch.
+ */
+@media (max-width: 60rem) {
   .shell {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1677,6 +1732,140 @@ article > form {
     margin-inline-start: 0;
     inline-size: 100%;
   }
+}
+
+/* ── Hover and press ──────────────────────────────────────────────────────── */
+
+/*
+ * Hover styles only where hover exists. On a touch screen a tap leaves the
+ * element in its hover state until the next tap somewhere else — a row stays
+ * grey, a button stays in its pressed shade — so every :hover rule lives under
+ * this query, and touch gets a short :active state instead.
+ */
+@media (hover: hover) {
+  .sidebar-nav a:hover {
+    background: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-foreground));
+  }
+
+  .sidebar .icon-button:hover {
+    color: hsl(var(--sidebar-foreground));
+    background: hsl(var(--sidebar-accent));
+  }
+
+  .icon-button:hover {
+    background: hsl(var(--muted));
+    color: hsl(var(--foreground));
+  }
+
+  .back a:hover {
+    color: hsl(var(--foreground));
+    text-decoration: underline;
+  }
+
+  button:hover,
+  .button-link:hover {
+    background: hsl(var(--primary) / 90%);
+  }
+
+  button:disabled:hover {
+    background: hsl(var(--primary));
+  }
+
+  button.secondary:hover {
+    background: hsl(var(--secondary) / 70%);
+  }
+
+  button.secondary:disabled:hover {
+    background: hsl(var(--secondary));
+  }
+
+  button.link:hover {
+    background: none;
+    color: hsl(var(--primary) / 75%);
+  }
+
+  button.link:disabled:hover {
+    background: none;
+  }
+
+  tbody tr:hover {
+    background: hsl(var(--muted) / 50%);
+  }
+
+  .row-link a:hover {
+    text-decoration: underline;
+  }
+
+  .pagination button:hover {
+    background: hsl(var(--muted));
+  }
+
+  .pagination button:disabled:hover {
+    background: hsl(var(--card));
+  }
+
+  .search-results button:hover {
+    background: hsl(var(--muted));
+  }
+
+  .stat:hover {
+    background: hsl(var(--muted) / 60%);
+  }
+
+  .settings-nav a:hover {
+    color: hsl(var(--foreground));
+  }
+}
+
+button:active:not(:disabled),
+.button-link:active {
+  background: hsl(var(--primary) / 80%);
+}
+
+button.secondary:active:not(:disabled) {
+  background: hsl(var(--secondary) / 55%);
+}
+
+button.link:active:not(:disabled) {
+  background: none;
+  color: hsl(var(--primary) / 60%);
+}
+
+.icon-button:active,
+.sidebar-nav a:active,
+.search-row:active,
+.search-results button:active,
+.stat:active,
+.record-card:active,
+tbody tr.row-link:active {
+  background: hsl(var(--muted));
+}
+
+/*
+ * Row actions on touch: outlined buttons at full target height rather than
+ * underlined words packed 0.75rem apart. The words stay the same; only the
+ * box around them appears, and they wrap under the row text.
+ */
+:root[data-touch="true"] .task-actions,
+:root[data-touch="true"] .representative-actions {
+  gap: 0.5rem;
+  inline-size: 100%;
+}
+
+:root[data-touch="true"] .task-actions button.link,
+:root[data-touch="true"] .representative-actions button.link {
+  min-block-size: var(--tap-small);
+  padding-inline: 0.8rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--card));
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+:root[data-touch="true"] .task-actions button.link:active:not(:disabled) {
+  background: hsl(var(--muted));
 }
 
 @media (prefers-reduced-motion: reduce) {

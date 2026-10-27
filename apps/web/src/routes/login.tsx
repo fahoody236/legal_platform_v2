@@ -93,6 +93,8 @@ export function LoginPage() {
               // while its label stays right-to-left.
               dir="ltr"
               autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
