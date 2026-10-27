@@ -778,6 +778,32 @@ form > .field {
   min-inline-size: 10rem;
 }
 
+/* The file chooser and the camera control, side by side when there is room. */
+.file-choice {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.file-choice input[type="file"] {
+  flex: 1;
+  min-inline-size: 12rem;
+}
+
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.88rem;
+}
+
+.upload-progress progress {
+  flex: 1;
+  block-size: 0.5rem;
+  accent-color: hsl(var(--primary));
+}
+
 /* ── Alerts and states ────────────────────────────────────────────────────── */
 
 /*
@@ -1776,6 +1802,20 @@ article > form {
     background: hsl(var(--secondary) / 70%);
   }
 
+  /*
+   * Destructive buttons had no hover rule of their own and kept their red
+   * because `button.destructive` came after `button:hover` in the file. With
+   * the hover rules moved here, after it, that no longer holds — so the
+   * colour is stated.
+   */
+  button.destructive:hover {
+    background: hsl(var(--destructive) / 90%);
+  }
+
+  button.destructive:disabled:hover {
+    background: hsl(var(--destructive));
+  }
+
   button.secondary:disabled:hover {
     background: hsl(var(--secondary));
   }
@@ -1827,9 +1867,18 @@ button.secondary:active:not(:disabled) {
   background: hsl(var(--secondary) / 55%);
 }
 
+button.destructive:active:not(:disabled) {
+  background: hsl(var(--destructive) / 80%);
+}
+
 button.link:active:not(:disabled) {
   background: none;
   color: hsl(var(--primary) / 60%);
+}
+
+/* White buttons press grey, not navy. */
+.pagination button:active:not(:disabled) {
+  background: hsl(var(--muted));
 }
 
 .icon-button:active,

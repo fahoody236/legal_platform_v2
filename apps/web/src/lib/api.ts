@@ -84,10 +84,17 @@ export async function apiFetch<T>(
  *
  * `fetch` cannot report how much of a request body has been sent, and a
  * 50 MB file over office wifi takes long enough that a button saying
- * «جارٍ الرفع…» for a minute reads as a hang. XMLHttpRequest can. The error
- * contract is the one apiFetch keeps: an ApiError with the status, the body's
- * `code` if any, and `Retry-After` on a 429; a request that never reached the
- * server rejects with a plain Error, which isNetworkError recognises.
+ * «جارٍ الرفع…» for a minute reads as a hang. XMLHttpRequest can.
+ *
+ * The contract is apiFetch's. The same things are sent: the session cookie
+ * (`withCredentials`, which is `credentials: "include"`), and no
+ * Content-Type of our own — the multipart boundary is the browser's to set,
+ * exactly as apiFetch leaves it for a FormData body. apiFetch adds nothing
+ * else, so neither does this. The same things come back: an ApiError with
+ * the status, the body's `code` if any, and `Retry-After` on a 429 when the
+ * header is present; a request that never reached the server rejects with a
+ * TypeError, as fetch does, which is what isNetworkError treats as "check
+ * the connection".
  */
 export function uploadForm<T>(
   path: string,
@@ -106,8 +113,8 @@ export function uploadForm<T>(
       }
     };
 
-    request.onerror = () => reject(new Error("Network request failed"));
-    request.onabort = () => reject(new Error("Upload aborted"));
+    request.onerror = () => reject(new TypeError("Network request failed"));
+    request.onabort = () => reject(new TypeError("Upload aborted"));
 
     request.onload = () => {
       const body = parseJson(request.responseText);
@@ -117,12 +124,17 @@ export function uploadForm<T>(
           typeof body === "object" && body !== null && "code" in body
             ? String((body as { code: unknown }).code)
             : undefined;
-        const retry = Number(request.getResponseHeader("Retry-After"));
+        // Absent is undefined, not zero: Number(null) is 0, and a 429 with no
+        // header would otherwise tell the person to wait one second.
+        const header = request.getResponseHeader("Retry-After");
+        const retry = header === null ? NaN : Number(header);
         reject(
           new ApiError(
             request.status,
             code,
-            request.status === 429 && Number.isFinite(retry) ? retry : undefined,
+            request.status === 429 && Number.isFinite(retry) && retry >= 0
+              ? retry
+              : undefined,
           ),
         );
         return;

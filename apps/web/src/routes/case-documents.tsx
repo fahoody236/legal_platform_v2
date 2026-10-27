@@ -1,14 +1,15 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { ApiError, isApiError, rateLimitedMessage } from "../lib/api.js";
 import { formatDateTime } from "../lib/dates.js";
 import {
   ACCEPT_ATTRIBUTE,
+  ACCEPT_CAMERA,
   MAX_DOCUMENT_BYTES,
+  defaultTitleFor,
   downloadVersion,
   formatSize,
   isAllowedExtension,
   kindLabel,
-  stemOf,
   useArchiveDocument,
   useCaseDocuments,
   useUploadDocument,
@@ -17,6 +18,7 @@ import {
   type DocumentVersionRow,
 } from "../lib/documents.js";
 import { useHasPermission } from "../lib/session.js";
+import { useIsTouch } from "../lib/use-media-query.js";
 
 const ALLOWED_TYPES_TEXT = "PDF أو Word (docx) أو Excel (xlsx) أو صورة";
 
@@ -373,12 +375,16 @@ function DownloadButton({
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [handedOver, setHandedOver] = useState(false);
+  const touch = useIsTouch();
 
   async function handleClick() {
     setPending(true);
     setError(null);
+    setHandedOver(false);
     try {
       await downloadVersion(documentId, version);
+      setHandedOver(true);
     } catch (caught) {
       setError(downloadMessage(caught));
     } finally {
@@ -396,6 +402,14 @@ function DownloadButton({
       >
         {pending ? "جارٍ التنزيل…" : label}
       </button>
+      {/* On an iPad the file goes to Safari's downloads with no further sign
+          from the page, so this says where to look. It does not say the file
+          was saved: the page handed it to the browser and knows no more. */}
+      {touch && handedOver && (
+        <span className="hint" role="status">
+          ابحث عن الملف في الملفات ← التنزيلات.
+        </span>
+      )}
       {error && (
         <span className="field-error" role="alert">
           {error}
@@ -405,7 +419,20 @@ function DownloadButton({
   );
 }
 
-/** A file input that pre-checks what it is given. */
+/**
+ * A file input that pre-checks what it is given, and on a touch device a
+ * second way in: the camera.
+ *
+ * One `accept` list cannot do both. With documents and images in it, iOS
+ * offers a chooser (Photo Library, Take Photo, Browse); the camera control
+ * carries `capture`, so it opens the camera directly for a court notice on
+ * the desk. Both feed the same `onChange`, the same pre-check, the same
+ * form state — which is why neither input is `required`: a photo from the
+ * camera leaves the chooser empty, and the form decides from its own state
+ * whether a file was chosen. The camera gives one photo per document; the
+ * hint points to the Files app's Scan Documents for anything with more
+ * pages, which produces a PDF this form accepts.
+ */
 function FileField({
   id,
   disabled,
@@ -415,6 +442,9 @@ function FileField({
   disabled: boolean;
   onChange: (file: File | null, problem: string | null) => void;
 }) {
+  const camera = useRef<HTMLInputElement>(null);
+  const touch = useIsTouch();
+
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
     onChange(file, file ? precheck(file) : null);
@@ -423,17 +453,43 @@ function FileField({
   return (
     <div className="field">
       <label htmlFor={id}>الملف</label>
-      <input
-        id={id}
-        type="file"
-        accept={ACCEPT_ATTRIBUTE}
-        required
-        disabled={disabled}
-        onChange={handleChange}
-      />
+      <div className="file-choice">
+        <input
+          id={id}
+          type="file"
+          accept={ACCEPT_ATTRIBUTE}
+          disabled={disabled}
+          onChange={handleChange}
+        />
+        {touch && (
+          <>
+            <button
+              type="button"
+              className="secondary"
+              disabled={disabled}
+              onClick={() => camera.current?.click()}
+            >
+              التقاط صورة
+            </button>
+            <input
+              ref={camera}
+              type="file"
+              accept={ACCEPT_CAMERA}
+              capture="environment"
+              hidden
+              tabIndex={-1}
+              aria-hidden="true"
+              disabled={disabled}
+              onChange={handleChange}
+            />
+          </>
+        )}
+      </div>
       <p className="hint">
         {ALLOWED_TYPES_TEXT}، بحد أقصى 50 م.ب. ملفات doc وxls القديمة غير
         مقبولة؛ احفظها بصيغة docx أو xlsx أولاً.
+        {touch &&
+          " لمستند من عدة صفحات، استخدم «مسح المستندات» في تطبيق الملفات؛ ينتج ملف PDF واحداً."}
       </p>
     </div>
   );
@@ -459,6 +515,7 @@ function UploadDocumentForm({
   const [titleTouched, setTitleTouched] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [progress, setProgress] = useState<number | null>(null);
   const upload = useUploadDocument();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -473,6 +530,7 @@ function UploadDocumentForm({
       return;
     }
 
+    setProgress(0);
     upload.mutate(
       {
         caseId,
@@ -480,8 +538,9 @@ function UploadDocumentForm({
         title: title.trim(),
         description: description.trim(),
         file,
+        onProgress: setProgress,
       },
-      { onSuccess: onDone },
+      { onSuccess: onDone, onSettled: () => setProgress(null) },
     );
   }
 
@@ -505,7 +564,7 @@ function UploadDocumentForm({
           setProblem(chosenProblem);
           upload.reset();
           if (chosen && !titleTouched) {
-            setTitleAr(stemOf(chosen.name));
+            setTitleAr(defaultTitleFor(chosen.name));
           }
         }}
       />
@@ -550,6 +609,8 @@ function UploadDocumentForm({
         />
       </div>
 
+      <UploadProgress value={progress} />
+
       <div className="form-actions">
         <button
           type="submit"
@@ -583,6 +644,7 @@ function UploadVersionForm({
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
   const upload = useUploadVersion(document.id);
   const next = (document.versions[0]?.versionNumber ?? 0) + 1;
 
@@ -596,7 +658,11 @@ function UploadVersionForm({
 
     if (problem) return;
 
-    upload.mutate(file, { onSuccess: onDone });
+    setProgress(0);
+    upload.mutate(
+      { file, onProgress: setProgress },
+      { onSuccess: onDone, onSettled: () => setProgress(null) },
+    );
   }
 
   const error = problem ?? uploadMessage(upload.error);
@@ -627,6 +693,8 @@ function UploadVersionForm({
         }}
       />
 
+      <UploadProgress value={progress} />
+
       <div className="form-actions">
         <button type="submit" disabled={upload.isPending || problem !== null}>
           {upload.isPending ? "جارٍ الرفع…" : "رفع الإصدار"}
@@ -641,6 +709,26 @@ function UploadVersionForm({
         </button>
       </div>
     </form>
+  );
+}
+
+/**
+ * How much of the file has left the device. Shown only while an upload is in
+ * flight; at 100% the server is still hashing and writing, so the bar stays
+ * full and the button still says «جارٍ الرفع…» until the response lands.
+ */
+function UploadProgress({ value }: { value: number | null }) {
+  if (value === null) return null;
+
+  const percent = Math.round(value * 100);
+
+  return (
+    <div className="upload-progress" role="status" aria-live="polite">
+      <progress max={100} value={percent} />
+      <span className="muted">
+        {percent < 100 ? `جارٍ الرفع… ${percent}%` : "تم الإرسال، جارٍ المعالجة…"}
+      </span>
+    </div>
   );
 }
 

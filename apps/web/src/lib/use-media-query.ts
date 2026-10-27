@@ -30,3 +30,14 @@ export function useMediaQuery(query: string): boolean {
 
 /** The width below which the sidebar leaves the flow and tables become cards; matches index.css. */
 export const NARROW = "(max-width: 60rem)";
+
+/**
+ * Whether main.tsx marked the document touch-first. Read once: the attribute
+ * is set before the first render and does not change. Components use it for
+ * the few things that are touch-only in substance — a camera control, where
+ * a download went — rather than merely touch-sized, which the stylesheet
+ * handles from the same attribute.
+ */
+export function useIsTouch(): boolean {
+  return document.documentElement.dataset["touch"] === "true";
+}
